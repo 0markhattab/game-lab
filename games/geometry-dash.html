@@ -1,0 +1,792 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Geometry Dash · GAME LAB</title>
+<link rel="stylesheet" href="../shared.css">
+<style>
+  .stage-wrap {
+    background: var(--bg-card);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-lg);
+    padding: 1.2rem;
+    margin: 2rem 0 1rem;
+  }
+  .stage-wrap canvas {
+    display: block;
+    margin: 0 auto;
+    width: 100%;
+    max-width: 800px;
+    height: auto;
+    background: #000;
+    border-radius: var(--radius);
+    image-rendering: pixelated;
+  }
+  .controls-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.6rem;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--line);
+  }
+  .keys {
+    display: flex;
+    gap: 0.6rem;
+    flex-wrap: wrap;
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+    color: var(--text-dim);
+  }
+  .keys kbd {
+    background: var(--bg-soft);
+    border: 1px solid var(--line-bright);
+    border-bottom-width: 2px;
+    border-radius: 4px;
+    padding: 2px 8px;
+    margin-right: 4px;
+    color: var(--text);
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+  }
+  details.source-block {
+    background: var(--bg-card);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    margin-top: 1rem;
+  }
+  details.source-block summary {
+    padding: 1rem 1.2rem;
+    font-family: var(--font-mono);
+    font-size: 0.85rem;
+    color: var(--lime);
+    cursor: pointer;
+    list-style: none;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  details.source-block summary::-webkit-details-marker { display: none; }
+  details.source-block summary::after {
+    content: "▾";
+    transition: transform 0.2s;
+    color: var(--text-dim);
+  }
+  details[open].source-block summary::after { transform: rotate(180deg); }
+  details.source-block pre {
+    border: none;
+    border-top: 1px solid var(--line);
+    border-radius: 0;
+    margin: 0;
+    max-height: 600px;
+  }
+  .game-meta-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    margin: 1.5rem 0;
+  }
+  .meta-cell {
+    background: var(--bg-card);
+    border: 1px solid var(--line);
+    padding: 1rem;
+    border-radius: var(--radius);
+  }
+  .meta-cell .k {
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    color: var(--text-mute);
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    margin-bottom: 0.3rem;
+  }
+  .meta-cell .v {
+    font-family: var(--font-mono);
+    color: var(--lime);
+    font-size: 0.95rem;
+  }
+</style>
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav-inner">
+    <a class="brand" href="../index.html"><span class="dot"></span>GAME_LAB</a>
+    <ul class="nav-links">
+      <li><a href="../index.html#lessons">Lessons</a></li>
+      <li><a href="../index.html#games" class="active">Games</a></li>
+      <li><a href="../studio/index.html">Studio</a></li>
+    </ul>
+  </div>
+</nav>
+
+<header class="hero">
+  <div class="container">
+    <div class="hero-meta">
+      <div class="lesson-num">01</div>
+      <div>
+        <div class="eyebrow">Game Template · Scrolling Runner</div>
+        <h1>Geometry Dash</h1>
+      </div>
+    </div>
+    <p class="lede">A side-scrolling rhythm-runner. The cube auto-runs forward, you press one button to jump, and one mistake ends the run. Touch a spike and explode. Survive long enough and the world speeds up.</p>
+    <div class="row mt-3">
+      <span class="tag lime">canvas</span>
+      <span class="tag">gravity + jump</span>
+      <span class="tag">AABB collision</span>
+      <span class="tag mag">particles</span>
+      <span class="tag cyan">audio</span>
+      <span class="tag">infinite scroll</span>
+    </div>
+  </div>
+</header>
+
+<section>
+  <div class="container">
+    <div class="stage-wrap">
+      <canvas id="game" width="800" height="360"></canvas>
+      <div class="controls-row">
+        <div class="keys">
+          <span><kbd>SPACE</kbd> jump</span>
+          <span><kbd>↑</kbd> jump</span>
+          <span><kbd>CLICK</kbd> jump</span>
+          <span><kbd>R</kbd> restart</span>
+        </div>
+        <div>
+          <button class="btn btn-secondary btn-sm" id="restart-btn">Restart</button>
+          <a class="btn btn-sm" href="../studio/index.html?template=geometry-dash">Open in Studio →</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="container">
+    <div class="section-title">
+      <span class="num">[01]</span>
+      <h2>How it works</h2>
+    </div>
+
+    <p>The cube doesn't actually move forward. It just bounces in place near the left edge of the screen. What moves is everything else — we slide the obstacles to the left by a value called <code>scrollX</code> that grows every frame. This is the same trick every side-scroller uses, from <em>Mario</em> to <em>Geometry Dash</em>.</p>
+
+    <div class="game-meta-grid">
+      <div class="meta-cell">
+        <div class="k">Game loop</div>
+        <div class="v">requestAnimationFrame</div>
+      </div>
+      <div class="meta-cell">
+        <div class="k">Player physics</div>
+        <div class="v">vy += gravity</div>
+      </div>
+      <div class="meta-cell">
+        <div class="k">Jump</div>
+        <div class="v">vy = -12.5 (impulse)</div>
+      </div>
+      <div class="meta-cell">
+        <div class="k">Collision</div>
+        <div class="v">AABB vs spike box</div>
+      </div>
+      <div class="meta-cell">
+        <div class="k">Difficulty</div>
+        <div class="v">speed += score / 1000</div>
+      </div>
+      <div class="meta-cell">
+        <div class="k">Death FX</div>
+        <div class="v">50 particles + audio</div>
+      </div>
+    </div>
+
+    <div class="callout tip">
+      <strong>Read the source.</strong> Then change one number. Make gravity heavier. Make the cube jump twice as high. Move it across the screen. The point isn't to memorize this code — it's to feel how loose and editable a game really is.
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="container">
+    <div class="section-title">
+      <span class="num">[02]</span>
+      <h2>Annotated source</h2>
+      <span class="tag">remix this</span>
+    </div>
+    <p class="mb-3">Every line is here. Comments call out the why, not just the what. Open it in the Studio to edit it live.</p>
+
+    <details class="source-block" open>
+      <summary>game.js — Geometry Dash full source</summary>
+<pre><code>// === GEOMETRY DASH =============================================
+// A scrolling rhythm-runner. One button. One life. Endless level.
+
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d');
+const W = canvas.width;   // 800
+const H = canvas.height;  // 360
+
+// --- World constants ---
+// Gravity is pixels-per-frame-per-frame. Jump impulse is a one-time
+// velocity change. Tune these two numbers and the whole game feels
+// different: heavy gravity = punchy jumps, light gravity = floaty.
+const GRAVITY  = 0.7;
+const JUMP_V   = -12.5;
+const GROUND_Y = H - 50;
+const BASE_SPEED = 4;
+
+// --- Game state ---
+let player, obstacles, particles, scrollX, speed, score, alive, deathT;
+let best = 0;
+
+function reset() {
+  player    = { x: 110, y: GROUND_Y - 12, vy: 0, size: 24, rot: 0, onGround: true };
+  obstacles = [];
+  particles = [];
+  scrollX   = 0;
+  speed     = BASE_SPEED;
+  score     = 0;
+  alive     = true;
+  deathT    = 0;
+  // Pre-generate a stretch of obstacles so we never run out
+  let nx = 600;
+  while (nx &lt; 5000) {
+    obstacles.push({ x: nx, type: Math.random() &lt; 0.28 ? 'double' : 'single' });
+    nx += 200 + Math.random() * 280;
+  }
+}
+
+// --- Input ---
+// We capture jump intent in a flag. The actual jump happens in the
+// loop only if the player is on the ground. This prevents floaty
+// double-jumps unless you intentionally allow them.
+let jumpRequested = false;
+window.addEventListener('keydown', e =&gt; {
+  if (e.code === 'Space' || e.code === 'ArrowUp') {
+    e.preventDefault();
+    if (alive) jumpRequested = true;
+    else reset();
+  }
+  if (e.code === 'KeyR') reset();
+});
+canvas.addEventListener('mousedown', () =&gt; {
+  if (alive) jumpRequested = true;
+  else reset();
+});
+document.getElementById('restart-btn').addEventListener('click', reset);
+
+// --- Collision: axis-aligned bounding box ---
+// p is the player (x,y is center). box is x,y,w,h (top-left).
+function hits(p, bx, by, bw, bh) {
+  return p.x - p.size/2 &lt; bx + bw &amp;&amp;
+         p.x + p.size/2 &gt; bx &amp;&amp;
+         p.y - p.size/2 &lt; by + bh &amp;&amp;
+         p.y + p.size/2 &gt; by;
+}
+
+// --- Death: explode into particles + a quick audio sting ---
+function die() {
+  alive = false;
+  if (score &gt; best) best = score;
+  const colors = ['#ff3eb5', '#9eff5a', '#ffb347', '#5ce1ff'];
+  for (let i = 0; i &lt; 60; i++) {
+    const a = (i / 60) * Math.PI * 2 + Math.random() * 0.3;
+    const sp = 2 + Math.random() * 5;
+    particles.push({
+      x: player.x, y: player.y,
+      vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 1,
+      life: 40 + Math.random() * 25,
+      maxLife: 60,
+      color: colors[Math.floor(Math.random() * colors.length)],
+      size: 2 + Math.random() * 3,
+      gravity: true
+    });
+  }
+  // Web Audio API: a short downward square-wave chirp = retro "dead"
+  try {
+    const ac = new (window.AudioContext || window.webkitAudioContext)();
+    const o = ac.createOscillator();
+    const g = ac.createGain();
+    o.type = 'square';
+    o.frequency.setValueAtTime(280, ac.currentTime);
+    o.frequency.exponentialRampToValueAtTime(60, ac.currentTime + 0.35);
+    g.gain.setValueAtTime(0.18, ac.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001, ac.currentTime + 0.35);
+    o.connect(g).connect(ac.destination);
+    o.start();
+    o.stop(ac.currentTime + 0.35);
+  } catch(e) { /* audio is optional */ }
+}
+
+// --- Main loop ---
+function loop() {
+  // ============== UPDATE ==============
+  if (alive) {
+    // Speed ramps up with score for that "getting harder" feel
+    speed = BASE_SPEED + Math.min(score / 1200, 4);
+    scrollX += speed;
+    score += speed * 0.5;
+
+    // Player vertical physics
+    player.vy += GRAVITY;
+    player.y  += player.vy;
+    if (player.y + player.size/2 &gt;= GROUND_Y) {
+      player.y = GROUND_Y - player.size/2;
+      player.vy = 0;
+      player.onGround = true;
+      player.rot = 0;        // snap rotation when landing
+    } else {
+      player.onGround = false;
+      player.rot += 0.20;    // spin while in air
+    }
+
+    // Trigger queued jump
+    if (jumpRequested &amp;&amp; player.onGround) {
+      player.vy = JUMP_V;
+      player.onGround = false;
+    }
+
+    // Trail particles
+    if (Math.random() &lt; 0.7) {
+      particles.push({
+        x: player.x - player.size/2 + (Math.random()-0.5) * 8,
+        y: player.y + (Math.random()-0.5) * 8,
+        vx: -1.5 - Math.random() * 1.5,
+        vy: -0.3 + Math.random() * 0.6,
+        life: 25 + Math.random() * 15,
+        maxLife: 40,
+        color: '#9eff5a',
+        size: 2 + Math.random() * 1.5,
+        gravity: false
+      });
+    }
+
+    // Collide with each spike. Hitbox is slightly smaller than the
+    // visual triangle to feel forgiving instead of cheap.
+    for (const o of obstacles) {
+      const ox = o.x - scrollX;
+      if (ox &gt; W + 50 || ox &lt; -60) continue;
+      if (hits(player, ox + 6, GROUND_Y - 24, 18, 24)) { die(); break; }
+      if (o.type === 'double' &amp;&amp;
+          hits(player, ox + 32, GROUND_Y - 24, 18, 24)) { die(); break; }
+    }
+
+    // Top up obstacles so the level never ends
+    while (obstacles[obstacles.length-1].x - scrollX &lt; 5000) {
+      const last = obstacles[obstacles.length-1];
+      obstacles.push({
+        x: last.x + 200 + Math.random() * 280,
+        type: Math.random() &lt; 0.28 ? 'double' : 'single'
+      });
+    }
+  } else {
+    deathT++;
+  }
+  jumpRequested = false;
+
+  // Update particles (always — they keep flying after death)
+  for (let i = particles.length - 1; i &gt;= 0; i--) {
+    const p = particles[i];
+    p.x += p.vx;
+    p.y += p.vy;
+    if (p.gravity) p.vy += 0.18;
+    p.life--;
+    if (p.life &lt;= 0) particles.splice(i, 1);
+  }
+
+  // ============== DRAW ==============
+  // Background — color subtly shifts with score
+  const hue = (score * 0.05) % 360;
+  const bg = ctx.createLinearGradient(0, 0, 0, H);
+  bg.addColorStop(0, `hsl(${hue}, 35%, 9%)`);
+  bg.addColorStop(1, '#0a0e1a');
+  ctx.fillStyle = bg;
+  ctx.fillRect(0, 0, W, H);
+
+  // Parallax stars
+  ctx.fillStyle = 'rgba(255,255,255,0.5)';
+  for (let i = 0; i &lt; 40; i++) {
+    const sx = ((i * 173 - scrollX * 0.25) % W + W) % W;
+    const sy = (i * 47) % (GROUND_Y - 20);
+    ctx.fillRect(sx, sy, 1, 1);
+  }
+
+  // Ground line + hatching
+  ctx.strokeStyle = '#9eff5a';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(0, GROUND_Y);
+  ctx.lineTo(W, GROUND_Y);
+  ctx.stroke();
+
+  ctx.strokeStyle = 'rgba(158,255,90,0.18)';
+  ctx.lineWidth = 1;
+  for (let x = -((scrollX * 1.5) % 32); x &lt; W; x += 32) {
+    ctx.beginPath();
+    ctx.moveTo(x, GROUND_Y + 1);
+    ctx.lineTo(x - 14, H);
+    ctx.stroke();
+  }
+
+  // Particles (draw before player so trail sits behind cube)
+  for (const p of particles) {
+    ctx.globalAlpha = Math.min(1, p.life / 30);
+    ctx.fillStyle = p.color;
+    ctx.fillRect(p.x, p.y, p.size, p.size);
+  }
+  ctx.globalAlpha = 1;
+
+  // Spikes
+  ctx.fillStyle = '#ff3eb5';
+  ctx.shadowColor = '#ff3eb5';
+  ctx.shadowBlur = 8;
+  for (const o of obstacles) {
+    const ox = o.x - scrollX;
+    if (ox &gt; W + 50 || ox &lt; -60) continue;
+    ctx.beginPath();
+    ctx.moveTo(ox, GROUND_Y);
+    ctx.lineTo(ox + 15, GROUND_Y - 28);
+    ctx.lineTo(ox + 30, GROUND_Y);
+    ctx.fill();
+    if (o.type === 'double') {
+      ctx.beginPath();
+      ctx.moveTo(ox + 28, GROUND_Y);
+      ctx.lineTo(ox + 43, GROUND_Y - 28);
+      ctx.lineTo(ox + 58, GROUND_Y);
+      ctx.fill();
+    }
+  }
+  ctx.shadowBlur = 0;
+
+  // Player cube — translate to center, rotate, draw centered square
+  if (alive) {
+    ctx.save();
+    ctx.translate(player.x, player.y);
+    ctx.rotate(player.rot);
+    ctx.shadowColor = '#9eff5a';
+    ctx.shadowBlur = 18;
+    ctx.fillStyle = '#9eff5a';
+    ctx.fillRect(-player.size/2, -player.size/2, player.size, player.size);
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = '#0a0e1a';
+    ctx.fillRect(-player.size/2 + 5, -player.size/2 + 5, player.size - 10, player.size - 10);
+    ctx.fillStyle = '#9eff5a';
+    ctx.fillRect(-3, -3, 6, 6);
+    ctx.restore();
+  }
+
+  // HUD
+  ctx.textAlign = 'left';
+  ctx.font = 'bold 22px JetBrains Mono, monospace';
+  ctx.fillStyle = '#9eff5a';
+  ctx.fillText(`SCORE  ${Math.floor(score).toString().padStart(5,'0')}`, 18, 32);
+  ctx.font = '11px JetBrains Mono, monospace';
+  ctx.fillStyle = '#9098b8';
+  ctx.fillText(`BEST   ${Math.floor(best).toString().padStart(5,'0')}`, 18, 50);
+  ctx.fillText(`SPEED  ${speed.toFixed(2)}x`, 18, 66);
+
+  // Death overlay
+  if (!alive) {
+    ctx.fillStyle = `rgba(255,90,106,${0.25 + Math.sin(deathT * 0.18) * 0.08})`;
+    ctx.fillRect(0, 0, W, H);
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#fff';
+    ctx.font = 'bold 44px Bricolage Grotesque, sans-serif';
+    ctx.fillText('CRASHED', W/2, H/2 - 6);
+    ctx.font = '13px JetBrains Mono, monospace';
+    ctx.fillStyle = '#9eff5a';
+    ctx.fillText('press SPACE or click to restart', W/2, H/2 + 24);
+  }
+
+  requestAnimationFrame(loop);
+}
+
+reset();
+loop();
+</code></pre>
+    </details>
+
+    <div class="callout mt-3">
+      <strong>Things to try changing:</strong>
+      <ul style="margin-top: 0.6rem; padding-left: 1.4rem; color: var(--text-dim); line-height: 1.9;">
+        <li>Replace the cube with a circle. Hint: <code>ctx.arc</code>.</li>
+        <li>Add a double-jump. Track an <code>airJumps</code> counter and only allow one before hitting ground.</li>
+        <li>Replace the spike triangles with a different obstacle shape — saws? walls? falling blocks?</li>
+        <li>Make the player a different color when in the air vs. on the ground.</li>
+        <li>Add coins that scroll along with obstacles. Each one bumps score by 100.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="container">
+    <div class="section-title">
+      <span class="num">[03]</span>
+      <h2>Concepts in play</h2>
+    </div>
+    <p>This template ties together every lesson in the course. If something here is confusing, the lesson it came from is one click away.</p>
+    <div class="row mt-3">
+      <a class="card" href="../lessons/01-game-loop.html"><strong>01 · Game loop</strong><br><span style="color:var(--text-mute);font-size:0.88rem;">requestAnimationFrame, update + draw cycle</span></a>
+      <a class="card" href="../lessons/03-keyboard.html"><strong>03 · Keyboard input</strong><br><span style="color:var(--text-mute);font-size:0.88rem;">Space to jump, R to restart</span></a>
+      <a class="card" href="../lessons/05-physics.html"><strong>05 · Physics</strong><br><span style="color:var(--text-mute);font-size:0.88rem;">gravity + jump impulse</span></a>
+      <a class="card" href="../lessons/06-collision.html"><strong>06 · Collision</strong><br><span style="color:var(--text-mute);font-size:0.88rem;">axis-aligned bounding boxes</span></a>
+    </div>
+  </div>
+</section>
+
+<footer class="site-footer">GAME_LAB · Geometry Dash · Game Template 01</footer>
+
+<script>
+// === GEOMETRY DASH =============================================
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d');
+const W = canvas.width;
+const H = canvas.height;
+
+const GRAVITY  = 0.7;
+const JUMP_V   = -12.5;
+const GROUND_Y = H - 50;
+const BASE_SPEED = 4;
+
+let player, obstacles, particles, scrollX, speed, score, alive, deathT;
+let best = 0;
+
+function reset() {
+  player    = { x: 110, y: GROUND_Y - 12, vy: 0, size: 24, rot: 0, onGround: true };
+  obstacles = [];
+  particles = [];
+  scrollX   = 0;
+  speed     = BASE_SPEED;
+  score     = 0;
+  alive     = true;
+  deathT    = 0;
+  let nx = 600;
+  while (nx < 5000) {
+    obstacles.push({ x: nx, type: Math.random() < 0.28 ? 'double' : 'single' });
+    nx += 200 + Math.random() * 280;
+  }
+}
+
+let jumpRequested = false;
+window.addEventListener('keydown', e => {
+  if (e.code === 'Space' || e.code === 'ArrowUp') {
+    e.preventDefault();
+    if (alive) jumpRequested = true;
+    else reset();
+  }
+  if (e.code === 'KeyR') reset();
+});
+canvas.addEventListener('mousedown', () => {
+  if (alive) jumpRequested = true;
+  else reset();
+});
+document.getElementById('restart-btn').addEventListener('click', reset);
+
+function hits(p, bx, by, bw, bh) {
+  return p.x - p.size/2 < bx + bw &&
+         p.x + p.size/2 > bx &&
+         p.y - p.size/2 < by + bh &&
+         p.y + p.size/2 > by;
+}
+
+function die() {
+  alive = false;
+  if (score > best) best = score;
+  const colors = ['#ff3eb5', '#9eff5a', '#ffb347', '#5ce1ff'];
+  for (let i = 0; i < 60; i++) {
+    const a = (i / 60) * Math.PI * 2 + Math.random() * 0.3;
+    const sp = 2 + Math.random() * 5;
+    particles.push({
+      x: player.x, y: player.y,
+      vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 1,
+      life: 40 + Math.random() * 25,
+      maxLife: 60,
+      color: colors[Math.floor(Math.random() * colors.length)],
+      size: 2 + Math.random() * 3,
+      gravity: true
+    });
+  }
+  try {
+    const ac = new (window.AudioContext || window.webkitAudioContext)();
+    const o = ac.createOscillator();
+    const g = ac.createGain();
+    o.type = 'square';
+    o.frequency.setValueAtTime(280, ac.currentTime);
+    o.frequency.exponentialRampToValueAtTime(60, ac.currentTime + 0.35);
+    g.gain.setValueAtTime(0.18, ac.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001, ac.currentTime + 0.35);
+    o.connect(g).connect(ac.destination);
+    o.start();
+    o.stop(ac.currentTime + 0.35);
+  } catch(e) {}
+}
+
+function loop() {
+  if (alive) {
+    speed = BASE_SPEED + Math.min(score / 1200, 4);
+    scrollX += speed;
+    score += speed * 0.5;
+
+    player.vy += GRAVITY;
+    player.y  += player.vy;
+    if (player.y + player.size/2 >= GROUND_Y) {
+      player.y = GROUND_Y - player.size/2;
+      player.vy = 0;
+      player.onGround = true;
+      player.rot = 0;
+    } else {
+      player.onGround = false;
+      player.rot += 0.20;
+    }
+
+    if (jumpRequested && player.onGround) {
+      player.vy = JUMP_V;
+      player.onGround = false;
+    }
+
+    if (Math.random() < 0.7) {
+      particles.push({
+        x: player.x - player.size/2 + (Math.random()-0.5) * 8,
+        y: player.y + (Math.random()-0.5) * 8,
+        vx: -1.5 - Math.random() * 1.5,
+        vy: -0.3 + Math.random() * 0.6,
+        life: 25 + Math.random() * 15,
+        maxLife: 40,
+        color: '#9eff5a',
+        size: 2 + Math.random() * 1.5,
+        gravity: false
+      });
+    }
+
+    for (const o of obstacles) {
+      const ox = o.x - scrollX;
+      if (ox > W + 50 || ox < -60) continue;
+      if (hits(player, ox + 6, GROUND_Y - 24, 18, 24)) { die(); break; }
+      if (o.type === 'double' &&
+          hits(player, ox + 32, GROUND_Y - 24, 18, 24)) { die(); break; }
+    }
+
+    while (obstacles[obstacles.length-1].x - scrollX < 5000) {
+      const last = obstacles[obstacles.length-1];
+      obstacles.push({
+        x: last.x + 200 + Math.random() * 280,
+        type: Math.random() < 0.28 ? 'double' : 'single'
+      });
+    }
+  } else {
+    deathT++;
+  }
+  jumpRequested = false;
+
+  for (let i = particles.length - 1; i >= 0; i--) {
+    const p = particles[i];
+    p.x += p.vx;
+    p.y += p.vy;
+    if (p.gravity) p.vy += 0.18;
+    p.life--;
+    if (p.life <= 0) particles.splice(i, 1);
+  }
+
+  const hue = (score * 0.05) % 360;
+  const bg = ctx.createLinearGradient(0, 0, 0, H);
+  bg.addColorStop(0, `hsl(${hue}, 35%, 9%)`);
+  bg.addColorStop(1, '#0a0e1a');
+  ctx.fillStyle = bg;
+  ctx.fillRect(0, 0, W, H);
+
+  ctx.fillStyle = 'rgba(255,255,255,0.5)';
+  for (let i = 0; i < 40; i++) {
+    const sx = ((i * 173 - scrollX * 0.25) % W + W) % W;
+    const sy = (i * 47) % (GROUND_Y - 20);
+    ctx.fillRect(sx, sy, 1, 1);
+  }
+
+  ctx.strokeStyle = '#9eff5a';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(0, GROUND_Y);
+  ctx.lineTo(W, GROUND_Y);
+  ctx.stroke();
+
+  ctx.strokeStyle = 'rgba(158,255,90,0.18)';
+  ctx.lineWidth = 1;
+  for (let x = -((scrollX * 1.5) % 32); x < W; x += 32) {
+    ctx.beginPath();
+    ctx.moveTo(x, GROUND_Y + 1);
+    ctx.lineTo(x - 14, H);
+    ctx.stroke();
+  }
+
+  for (const p of particles) {
+    ctx.globalAlpha = Math.min(1, p.life / 30);
+    ctx.fillStyle = p.color;
+    ctx.fillRect(p.x, p.y, p.size, p.size);
+  }
+  ctx.globalAlpha = 1;
+
+  ctx.fillStyle = '#ff3eb5';
+  ctx.shadowColor = '#ff3eb5';
+  ctx.shadowBlur = 8;
+  for (const o of obstacles) {
+    const ox = o.x - scrollX;
+    if (ox > W + 50 || ox < -60) continue;
+    ctx.beginPath();
+    ctx.moveTo(ox, GROUND_Y);
+    ctx.lineTo(ox + 15, GROUND_Y - 28);
+    ctx.lineTo(ox + 30, GROUND_Y);
+    ctx.fill();
+    if (o.type === 'double') {
+      ctx.beginPath();
+      ctx.moveTo(ox + 28, GROUND_Y);
+      ctx.lineTo(ox + 43, GROUND_Y - 28);
+      ctx.lineTo(ox + 58, GROUND_Y);
+      ctx.fill();
+    }
+  }
+  ctx.shadowBlur = 0;
+
+  if (alive) {
+    ctx.save();
+    ctx.translate(player.x, player.y);
+    ctx.rotate(player.rot);
+    ctx.shadowColor = '#9eff5a';
+    ctx.shadowBlur = 18;
+    ctx.fillStyle = '#9eff5a';
+    ctx.fillRect(-player.size/2, -player.size/2, player.size, player.size);
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = '#0a0e1a';
+    ctx.fillRect(-player.size/2 + 5, -player.size/2 + 5, player.size - 10, player.size - 10);
+    ctx.fillStyle = '#9eff5a';
+    ctx.fillRect(-3, -3, 6, 6);
+    ctx.restore();
+  }
+
+  ctx.textAlign = 'left';
+  ctx.font = 'bold 22px JetBrains Mono, monospace';
+  ctx.fillStyle = '#9eff5a';
+  ctx.fillText(`SCORE  ${Math.floor(score).toString().padStart(5,'0')}`, 18, 32);
+  ctx.font = '11px JetBrains Mono, monospace';
+  ctx.fillStyle = '#9098b8';
+  ctx.fillText(`BEST   ${Math.floor(best).toString().padStart(5,'0')}`, 18, 50);
+  ctx.fillText(`SPEED  ${speed.toFixed(2)}x`, 18, 66);
+
+  if (!alive) {
+    ctx.fillStyle = `rgba(255,90,106,${0.25 + Math.sin(deathT * 0.18) * 0.08})`;
+    ctx.fillRect(0, 0, W, H);
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#fff';
+    ctx.font = 'bold 44px Bricolage Grotesque, sans-serif';
+    ctx.fillText('CRASHED', W/2, H/2 - 6);
+    ctx.font = '13px JetBrains Mono, monospace';
+    ctx.fillStyle = '#9eff5a';
+    ctx.fillText('press SPACE or click to restart', W/2, H/2 + 24);
+  }
+
+  requestAnimationFrame(loop);
+}
+
+reset();
+loop();
+</script>
+</body>
+</html>

@@ -1,0 +1,433 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Snake · GAME LAB</title>
+<link rel="stylesheet" href="../shared.css">
+<style>
+  .stage-wrap { background: var(--bg-card); border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 1.2rem; margin: 2rem 0 1rem; }
+  .stage-wrap canvas { display: block; margin: 0 auto; width: 100%; max-width: 480px; height: auto; background: #000; border-radius: var(--radius); image-rendering: pixelated; }
+  .controls-row { display: flex; flex-wrap: wrap; gap: 0.6rem; align-items: center; justify-content: space-between; margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--line); }
+  .keys { display: flex; gap: 0.6rem; flex-wrap: wrap; font-family: var(--font-mono); font-size: 0.78rem; color: var(--text-dim); }
+  .keys kbd { background: var(--bg-soft); border: 1px solid var(--line-bright); border-bottom-width: 2px; border-radius: 4px; padding: 2px 8px; margin-right: 4px; color: var(--text); font-family: var(--font-mono); font-size: 0.78rem; }
+  details.source-block { background: var(--bg-card); border: 1px solid var(--line); border-radius: var(--radius); margin-top: 1rem; }
+  details.source-block summary { padding: 1rem 1.2rem; font-family: var(--font-mono); font-size: 0.85rem; color: var(--lime); cursor: pointer; list-style: none; display: flex; align-items: center; justify-content: space-between; }
+  details.source-block summary::-webkit-details-marker { display: none; }
+  details.source-block summary::after { content: "▾"; transition: transform 0.2s; color: var(--text-dim); }
+  details[open].source-block summary::after { transform: rotate(180deg); }
+  details.source-block pre { border: none; border-top: 1px solid var(--line); border-radius: 0; margin: 0; max-height: 600px; }
+  .game-meta-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin: 1.5rem 0; }
+  .meta-cell { background: var(--bg-card); border: 1px solid var(--line); padding: 1rem; border-radius: var(--radius); }
+  .meta-cell .k { font-family: var(--font-mono); font-size: 0.7rem; color: var(--text-mute); text-transform: uppercase; letter-spacing: 0.15em; margin-bottom: 0.3rem; }
+  .meta-cell .v { font-family: var(--font-mono); color: var(--lime); font-size: 0.95rem; }
+</style>
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav-inner">
+    <a class="brand" href="../index.html"><span class="dot"></span>GAME_LAB</a>
+    <ul class="nav-links">
+      <li><a href="../index.html#lessons">Lessons</a></li>
+      <li><a href="../index.html#games" class="active">Games</a></li>
+      <li><a href="../studio/index.html">Studio</a></li>
+    </ul>
+  </div>
+</nav>
+
+<header class="hero">
+  <div class="container">
+    <div class="hero-meta">
+      <div class="lesson-num">02</div>
+      <div>
+        <div class="eyebrow">Game Template · Grid Game</div>
+        <h1>Snake</h1>
+      </div>
+    </div>
+    <p class="lede">The original mobile-phone classic. Move around a grid, eat the dot, grow longer. Run into yourself or the wall and it's over. Looks simple. The grid logic underneath is more interesting than you'd think.</p>
+    <div class="row mt-3">
+      <span class="tag lime">canvas</span>
+      <span class="tag">grid math</span>
+      <span class="tag mag">array as queue</span>
+      <span class="tag">discrete time step</span>
+    </div>
+  </div>
+</header>
+
+<section>
+  <div class="container">
+    <div class="stage-wrap">
+      <canvas id="game" width="480" height="480"></canvas>
+      <div class="controls-row">
+        <div class="keys">
+          <span><kbd>←</kbd><kbd>→</kbd><kbd>↑</kbd><kbd>↓</kbd> turn</span>
+          <span><kbd>WASD</kbd> turn</span>
+          <span><kbd>SPACE</kbd> restart</span>
+        </div>
+        <div>
+          <button class="btn btn-secondary btn-sm" id="restart-btn">Restart</button>
+          <a class="btn btn-sm" href="../studio/index.html?template=snake">Open in Studio →</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="container">
+    <div class="section-title">
+      <span class="num">[01]</span>
+      <h2>How it works</h2>
+    </div>
+    <p>Snake doesn't move every frame. It moves on a slow tick — about 8 times a second. Between ticks, the snake doesn't actually animate; it teleports one cell forward. Your eye fills in the motion.</p>
+    <p>The snake itself is just an array of <code>{x, y}</code> grid cells. To move forward: add a new head cell in the direction of travel, and remove the tail cell. To grow: skip removing the tail. That's the whole trick.</p>
+
+    <div class="game-meta-grid">
+      <div class="meta-cell"><div class="k">Grid</div><div class="v">24 × 24 cells</div></div>
+      <div class="meta-cell"><div class="k">Cell size</div><div class="v">20 × 20 px</div></div>
+      <div class="meta-cell"><div class="k">Tick rate</div><div class="v">~8 / second</div></div>
+      <div class="meta-cell"><div class="k">Self-collision</div><div class="v">array.some()</div></div>
+      <div class="meta-cell"><div class="k">Food spawn</div><div class="v">random empty cell</div></div>
+      <div class="meta-cell"><div class="k">Wrap-around?</div><div class="v">no — wall = death</div></div>
+    </div>
+
+    <div class="callout warn">
+      <strong>The classic Snake bug.</strong> If you press LEFT while moving RIGHT, the snake folds back on itself and dies on its own neck. We fix this by storing the direction as a "queued" turn that only commits on the next tick — and by rejecting any turn that's a 180° flip from the current heading.
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="container">
+    <div class="section-title">
+      <span class="num">[02]</span>
+      <h2>Annotated source</h2>
+      <span class="tag">remix this</span>
+    </div>
+
+    <details class="source-block" open>
+      <summary>game.js — Snake full source</summary>
+<pre><code>// === SNAKE =====================================================
+// Grid-based classic. The snake is an array of cells.
+// Every "tick" we shift it forward by adding a new head and
+// (usually) removing the tail.
+
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d');
+const CELL = 20;
+const COLS = canvas.width / CELL;   // 24
+const ROWS = canvas.height / CELL;  // 24
+
+let snake, dir, queuedDir, food, score, best = 0, alive, tickMs, lastTick;
+
+function reset() {
+  // Snake starts horizontal, 4 cells, in the middle, heading right
+  snake = [
+    { x: 10, y: 12 },
+    { x: 11, y: 12 },
+    { x: 12, y: 12 },
+    { x: 13, y: 12 },
+  ];
+  dir = { x: 1, y: 0 };
+  queuedDir = { x: 1, y: 0 };
+  spawnFood();
+  score = 0;
+  alive = true;
+  tickMs = 120;            // ~8 ticks/sec; speeds up as snake grows
+  lastTick = performance.now();
+}
+
+function spawnFood() {
+  // Pick a random cell that the snake doesn't occupy
+  while (true) {
+    const f = {
+      x: Math.floor(Math.random() * COLS),
+      y: Math.floor(Math.random() * ROWS)
+    };
+    if (!snake.some(s =&gt; s.x === f.x &amp;&amp; s.y === f.y)) {
+      food = f;
+      return;
+    }
+  }
+}
+
+// --- Input: queue turns. Reject 180° flips. ---
+window.addEventListener('keydown', e =&gt; {
+  const map = {
+    ArrowLeft:  { x:-1, y: 0 }, KeyA: { x:-1, y: 0 },
+    ArrowRight: { x: 1, y: 0 }, KeyD: { x: 1, y: 0 },
+    ArrowUp:    { x: 0, y:-1 }, KeyW: { x: 0, y:-1 },
+    ArrowDown:  { x: 0, y: 1 }, KeyS: { x: 0, y: 1 },
+  };
+  const nd = map[e.code];
+  if (nd) {
+    e.preventDefault();
+    // Block reversing onto your own neck
+    if (nd.x !== -dir.x || nd.y !== -dir.y) queuedDir = nd;
+  }
+  if (e.code === 'Space' &amp;&amp; !alive) reset();
+});
+document.getElementById('restart-btn').addEventListener('click', reset);
+
+function tick() {
+  // Commit the queued turn
+  dir = queuedDir;
+
+  // New head one cell in front
+  const head = { x: snake[snake.length-1].x + dir.x,
+                 y: snake[snake.length-1].y + dir.y };
+
+  // Wall collision
+  if (head.x &lt; 0 || head.x &gt;= COLS || head.y &lt; 0 || head.y &gt;= ROWS) {
+    alive = false; return;
+  }
+  // Self collision (check every body cell — head about to enter it)
+  if (snake.some(s =&gt; s.x === head.x &amp;&amp; s.y === head.y)) {
+    alive = false; return;
+  }
+
+  snake.push(head);
+
+  // Eat food? Don't remove tail this tick = snake grows by 1
+  if (head.x === food.x &amp;&amp; head.y === food.y) {
+    score++;
+    if (score &gt; best) best = score;
+    spawnFood();
+    // Speed up a touch every food. Don't go faster than 50ms/tick.
+    tickMs = Math.max(50, tickMs - 3);
+  } else {
+    snake.shift();
+  }
+}
+
+function draw() {
+  // Background
+  ctx.fillStyle = '#0a0e1a';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  // Grid lines (subtle blueprint feel)
+  ctx.strokeStyle = 'rgba(35,44,74,0.6)';
+  ctx.lineWidth = 1;
+  for (let i = 0; i &lt;= COLS; i++) {
+    ctx.beginPath();
+    ctx.moveTo(i * CELL, 0); ctx.lineTo(i * CELL, canvas.height);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(0, i * CELL); ctx.lineTo(canvas.width, i * CELL);
+    ctx.stroke();
+  }
+
+  // Food (pulsing magenta)
+  const pulse = 1 + Math.sin(performance.now() * 0.006) * 0.08;
+  ctx.fillStyle = '#ff3eb5';
+  ctx.shadowColor = '#ff3eb5';
+  ctx.shadowBlur = 12;
+  const fs = CELL * 0.7 * pulse;
+  ctx.fillRect(food.x * CELL + (CELL - fs) / 2,
+               food.y * CELL + (CELL - fs) / 2, fs, fs);
+  ctx.shadowBlur = 0;
+
+  // Snake — gradient from tail (dim) to head (bright)
+  for (let i = 0; i &lt; snake.length; i++) {
+    const s = snake[i];
+    const t = i / Math.max(1, snake.length - 1); // 0=tail, 1=head
+    const isHead = i === snake.length - 1;
+    if (isHead) {
+      ctx.shadowColor = '#9eff5a';
+      ctx.shadowBlur = 14;
+    }
+    ctx.fillStyle = `rgba(158,255,90,${0.4 + t * 0.6})`;
+    ctx.fillRect(s.x * CELL + 1, s.y * CELL + 1, CELL - 2, CELL - 2);
+    ctx.shadowBlur = 0;
+  }
+
+  // HUD
+  ctx.fillStyle = '#9eff5a';
+  ctx.font = 'bold 18px JetBrains Mono, monospace';
+  ctx.textAlign = 'left';
+  ctx.fillText(`SCORE ${score}`, 12, 24);
+  ctx.font = '11px JetBrains Mono, monospace';
+  ctx.fillStyle = '#9098b8';
+  ctx.fillText(`BEST  ${best}`, 12, 40);
+
+  // Death screen
+  if (!alive) {
+    ctx.fillStyle = 'rgba(255,90,106,0.25)';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#fff';
+    ctx.font = 'bold 36px Bricolage Grotesque, sans-serif';
+    ctx.fillText('GAME OVER', canvas.width/2, canvas.height/2 - 6);
+    ctx.font = '12px JetBrains Mono, monospace';
+    ctx.fillStyle = '#9eff5a';
+    ctx.fillText('press SPACE to restart', canvas.width/2, canvas.height/2 + 22);
+  }
+}
+
+function loop(now) {
+  // Two clocks: a slow tick (game logic) and a fast clock (drawing)
+  if (alive &amp;&amp; now - lastTick &gt;= tickMs) {
+    lastTick = now;
+    tick();
+  }
+  draw();
+  requestAnimationFrame(loop);
+}
+
+reset();
+requestAnimationFrame(loop);
+</code></pre>
+    </details>
+
+    <div class="callout mt-3">
+      <strong>Things to try changing:</strong>
+      <ul style="margin-top: 0.6rem; padding-left: 1.4rem; color: var(--text-dim); line-height: 1.9;">
+        <li>Make the walls wrap around — a snake leaving the right edge appears on the left.</li>
+        <li>Add a second food type: golden food worth 3 points but only stays for 5 seconds.</li>
+        <li>Slow the snake down instead of speeding it up. Which feels better?</li>
+        <li>Draw the snake as a smooth chain of circles instead of squares.</li>
+        <li>Add obstacles — fixed walls in the middle of the grid that you also can't touch.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="container">
+    <div class="section-title">
+      <span class="num">[03]</span>
+      <h2>Concepts in play</h2>
+    </div>
+    <div class="row mt-3">
+      <a class="card" href="../lessons/01-game-loop.html"><strong>01 · Game loop</strong><br><span style="color:var(--text-mute);font-size:0.88rem;">two clocks: slow tick + fast draw</span></a>
+      <a class="card" href="../lessons/03-keyboard.html"><strong>03 · Keyboard</strong><br><span style="color:var(--text-mute);font-size:0.88rem;">queued direction inputs</span></a>
+      <a class="card" href="../lessons/06-collision.html"><strong>06 · Collision</strong><br><span style="color:var(--text-mute);font-size:0.88rem;">grid equality and array.some()</span></a>
+    </div>
+  </div>
+</section>
+
+<footer class="site-footer">GAME_LAB · Snake · Game Template 02</footer>
+
+<script>
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d');
+const CELL = 20;
+const COLS = canvas.width / CELL;
+const ROWS = canvas.height / CELL;
+
+let snake, dir, queuedDir, food, score, best = 0, alive, tickMs, lastTick;
+
+function reset() {
+  snake = [
+    { x: 10, y: 12 },
+    { x: 11, y: 12 },
+    { x: 12, y: 12 },
+    { x: 13, y: 12 },
+  ];
+  dir = { x: 1, y: 0 };
+  queuedDir = { x: 1, y: 0 };
+  spawnFood();
+  score = 0;
+  alive = true;
+  tickMs = 120;
+  lastTick = performance.now();
+}
+
+function spawnFood() {
+  while (true) {
+    const f = { x: Math.floor(Math.random() * COLS), y: Math.floor(Math.random() * ROWS) };
+    if (!snake.some(s => s.x === f.x && s.y === f.y)) { food = f; return; }
+  }
+}
+
+window.addEventListener('keydown', e => {
+  const map = {
+    ArrowLeft:  { x:-1, y: 0 }, KeyA: { x:-1, y: 0 },
+    ArrowRight: { x: 1, y: 0 }, KeyD: { x: 1, y: 0 },
+    ArrowUp:    { x: 0, y:-1 }, KeyW: { x: 0, y:-1 },
+    ArrowDown:  { x: 0, y: 1 }, KeyS: { x: 0, y: 1 },
+  };
+  const nd = map[e.code];
+  if (nd) {
+    e.preventDefault();
+    if (nd.x !== -dir.x || nd.y !== -dir.y) queuedDir = nd;
+  }
+  if (e.code === 'Space' && !alive) reset();
+});
+document.getElementById('restart-btn').addEventListener('click', reset);
+
+function tick() {
+  dir = queuedDir;
+  const head = { x: snake[snake.length-1].x + dir.x, y: snake[snake.length-1].y + dir.y };
+  if (head.x < 0 || head.x >= COLS || head.y < 0 || head.y >= ROWS) { alive = false; return; }
+  if (snake.some(s => s.x === head.x && s.y === head.y)) { alive = false; return; }
+  snake.push(head);
+  if (head.x === food.x && head.y === food.y) {
+    score++;
+    if (score > best) best = score;
+    spawnFood();
+    tickMs = Math.max(50, tickMs - 3);
+  } else {
+    snake.shift();
+  }
+}
+
+function draw() {
+  ctx.fillStyle = '#0a0e1a';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.strokeStyle = 'rgba(35,44,74,0.6)';
+  ctx.lineWidth = 1;
+  for (let i = 0; i <= COLS; i++) {
+    ctx.beginPath();
+    ctx.moveTo(i * CELL, 0); ctx.lineTo(i * CELL, canvas.height); ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(0, i * CELL); ctx.lineTo(canvas.width, i * CELL); ctx.stroke();
+  }
+  const pulse = 1 + Math.sin(performance.now() * 0.006) * 0.08;
+  ctx.fillStyle = '#ff3eb5';
+  ctx.shadowColor = '#ff3eb5';
+  ctx.shadowBlur = 12;
+  const fs = CELL * 0.7 * pulse;
+  ctx.fillRect(food.x * CELL + (CELL - fs) / 2, food.y * CELL + (CELL - fs) / 2, fs, fs);
+  ctx.shadowBlur = 0;
+  for (let i = 0; i < snake.length; i++) {
+    const s = snake[i];
+    const t = i / Math.max(1, snake.length - 1);
+    const isHead = i === snake.length - 1;
+    if (isHead) { ctx.shadowColor = '#9eff5a'; ctx.shadowBlur = 14; }
+    ctx.fillStyle = `rgba(158,255,90,${0.4 + t * 0.6})`;
+    ctx.fillRect(s.x * CELL + 1, s.y * CELL + 1, CELL - 2, CELL - 2);
+    ctx.shadowBlur = 0;
+  }
+  ctx.fillStyle = '#9eff5a';
+  ctx.font = 'bold 18px JetBrains Mono, monospace';
+  ctx.textAlign = 'left';
+  ctx.fillText(`SCORE ${score}`, 12, 24);
+  ctx.font = '11px JetBrains Mono, monospace';
+  ctx.fillStyle = '#9098b8';
+  ctx.fillText(`BEST  ${best}`, 12, 40);
+  if (!alive) {
+    ctx.fillStyle = 'rgba(255,90,106,0.25)';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#fff';
+    ctx.font = 'bold 36px Bricolage Grotesque, sans-serif';
+    ctx.fillText('GAME OVER', canvas.width/2, canvas.height/2 - 6);
+    ctx.font = '12px JetBrains Mono, monospace';
+    ctx.fillStyle = '#9eff5a';
+    ctx.fillText('press SPACE to restart', canvas.width/2, canvas.height/2 + 22);
+  }
+}
+
+function loop(now) {
+  if (alive && now - lastTick >= tickMs) { lastTick = now; tick(); }
+  draw();
+  requestAnimationFrame(loop);
+}
+
+reset();
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>
