@@ -1,0 +1,570 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GAME LAB — Engineering Elective</title>
+<link rel="stylesheet" href="shared.css">
+<style>
+  .hero-home {
+    padding: 5rem 0 4rem;
+    position: relative;
+    overflow: hidden;
+  }
+  .hero-grid {
+    display: grid;
+    grid-template-columns: 1.4fr 1fr;
+    gap: 3rem;
+    align-items: center;
+  }
+  @media (max-width: 900px) { .hero-grid { grid-template-columns: 1fr; } }
+  .hero-title {
+    font-family: var(--font-display);
+    font-size: clamp(3rem, 8vw, 6rem);
+    font-weight: 800;
+    line-height: 0.95;
+    letter-spacing: -0.04em;
+    margin-bottom: 1.2rem;
+  }
+  .hero-title .accent {
+    color: var(--lime);
+    font-style: italic;
+    font-family: 'Bricolage Grotesque', serif;
+  }
+  .hero-lede {
+    font-size: 1.15rem;
+    max-width: 50ch;
+    margin-bottom: 2rem;
+  }
+  .hero-cta { display: flex; gap: 0.8rem; flex-wrap: wrap; }
+  .hero-stats {
+    margin-top: 3rem;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+    border-top: 1px solid var(--line);
+    padding-top: 1.5rem;
+    max-width: 480px;
+  }
+  .stat .num {
+    font-family: var(--font-mono);
+    font-size: 1.6rem;
+    color: var(--lime);
+    font-weight: 700;
+  }
+  .stat .label {
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    color: var(--text-mute);
+  }
+
+  /* Floating preview canvas */
+  .preview-window {
+    background: var(--bg-card);
+    border: 1px solid var(--line-bright);
+    border-radius: var(--radius);
+    overflow: hidden;
+    box-shadow: 0 30px 80px rgba(0,0,0,0.5), 0 0 60px rgba(158,255,90,0.08);
+    transform: rotate(-1.5deg);
+  }
+  .preview-window:hover { transform: rotate(0); transition: transform 0.4s; }
+  .preview-window .titlebar {
+    padding: 0.6rem 0.9rem;
+    background: var(--bg-soft);
+    border-bottom: 1px solid var(--line);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    color: var(--text-mute);
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+  }
+  .preview-window canvas {
+    display: block;
+    width: 100%;
+    height: auto;
+    background: #0a0e1a;
+  }
+
+  /* Lesson grid */
+  .lessons {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1rem;
+  }
+  .lesson-card {
+    background: var(--bg-card);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 1.6rem 1.4rem;
+    text-decoration: none;
+    color: var(--text);
+    transition: border-color 0.2s, transform 0.2s;
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+    min-height: 180px;
+    position: relative;
+    overflow: hidden;
+  }
+  .lesson-card:hover {
+    border-color: var(--lime);
+    transform: translateY(-2px);
+    text-decoration: none;
+  }
+  .lesson-card .num {
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+    color: var(--lime);
+    letter-spacing: 0.15em;
+  }
+  .lesson-card h3 {
+    font-family: var(--font-display);
+    font-size: 1.4rem;
+    line-height: 1.1;
+  }
+  .lesson-card p { font-size: 0.92rem; color: var(--text-dim); }
+  .lesson-card .meta {
+    margin-top: auto;
+    padding-top: 0.8rem;
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+  }
+
+  /* Games row */
+  .games-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 1rem;
+  }
+  .game-card {
+    background: var(--bg-card);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    overflow: hidden;
+    text-decoration: none;
+    color: var(--text);
+    transition: border-color 0.2s, transform 0.2s;
+    display: flex;
+    flex-direction: column;
+  }
+  .game-card:hover { border-color: var(--magenta); transform: translateY(-2px); text-decoration: none; }
+  .game-card .thumb {
+    height: 160px;
+    background: #000;
+    position: relative;
+    overflow: hidden;
+  }
+  .game-card .thumb svg { width: 100%; height: 100%; display: block; }
+  .game-card .body { padding: 1.1rem 1.2rem; }
+  .game-card h3 { font-family: var(--font-display); font-size: 1.2rem; }
+  .game-card p { font-size: 0.85rem; }
+
+  /* Studio CTA */
+  .studio-cta {
+    background: linear-gradient(135deg, rgba(158,255,90,0.06), rgba(255,62,181,0.04));
+    border: 1px solid var(--line-bright);
+    border-radius: var(--radius-lg);
+    padding: 3rem 2rem;
+    display: grid;
+    grid-template-columns: 1.5fr 1fr;
+    gap: 2rem;
+    align-items: center;
+  }
+  @media (max-width: 800px) { .studio-cta { grid-template-columns: 1fr; } }
+  .studio-cta h2 { margin-bottom: 0.6rem; }
+  .studio-cta p { margin-bottom: 1.2rem; }
+  .ascii {
+    font-family: var(--font-mono);
+    color: var(--lime);
+    font-size: 0.7rem;
+    line-height: 1.1;
+    white-space: pre;
+    opacity: 0.7;
+  }
+</style>
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav-inner">
+    <a class="brand" href="index.html"><span class="dot"></span>GAME_LAB <span style="color:var(--text-mute)">/ENGR-9</span></a>
+    <ul class="nav-links">
+      <li><a href="#lessons">Lessons</a></li>
+      <li><a href="#games">Games</a></li>
+      <li><a href="studio/index.html">Studio</a></li>
+      <li><a href="#about">About</a></li>
+    </ul>
+  </div>
+</nav>
+
+<header class="hero-home">
+  <div class="container hero-grid">
+    <div>
+      <div class="eyebrow mb-2">Engineering Elective · 2026</div>
+      <h1 class="hero-title">Make<br>your<br><span class="accent">game.</span></h1>
+      <p class="hero-lede">A hands-on lab where you'll build real games from zero — game loops, physics, collisions, and inputs — using JavaScript and HTML5 Canvas. Edit code in the browser, see it run instantly.</p>
+      <div class="hero-cta">
+        <a class="btn" href="lessons/01-game-loop.html">▶ Start Lesson 01</a>
+        <a class="btn btn-secondary" href="studio/index.html">Open Studio</a>
+      </div>
+      <div class="hero-stats">
+        <div class="stat"><div class="num">07</div><div class="label">Lessons</div></div>
+        <div class="stat"><div class="num">04</div><div class="label">Game templates</div></div>
+        <div class="stat"><div class="num">∞</div><div class="label">Things to build</div></div>
+      </div>
+    </div>
+    <div>
+      <div class="preview-window">
+        <div class="titlebar">
+          <span>geometry-dash.demo</span>
+          <span style="color:var(--lime)">● LIVE</span>
+        </div>
+        <canvas id="hero-canvas" width="480" height="280"></canvas>
+      </div>
+    </div>
+  </div>
+</header>
+
+<section id="lessons">
+  <div class="container">
+    <div class="section-title">
+      <span class="num">[01]</span>
+      <h2>Lessons</h2>
+      <span class="tag">7 modules · ~90 min each</span>
+    </div>
+    <p class="mb-3">Each lesson runs in your browser with a live editor. Read the concept, modify the code, hit run, and complete the challenge.</p>
+
+    <div class="lessons">
+      <a class="lesson-card" href="lessons/01-game-loop.html">
+        <span class="num">LESSON 01</span>
+        <h3>The Game Loop</h3>
+        <p>The heartbeat of every game. requestAnimationFrame, frame timing, and the classic update→draw cycle.</p>
+        <div class="meta"><span class="tag lime">Beginner</span><span class="tag">15 min</span></div>
+      </a>
+
+      <a class="lesson-card" href="lessons/02-drawing.html">
+        <span class="num">LESSON 02</span>
+        <h3>Drawing on Canvas</h3>
+        <p>Rectangles, circles, lines, gradients, and transforms. Your first sprite that moves across the screen.</p>
+        <div class="meta"><span class="tag lime">Beginner</span><span class="tag">20 min</span></div>
+      </a>
+
+      <a class="lesson-card" href="lessons/03-keyboard.html">
+        <span class="num">LESSON 03</span>
+        <h3>Keyboard Input</h3>
+        <p>Capture key presses, build a keys object, and move a character around using WASD or arrow keys.</p>
+        <div class="meta"><span class="tag lime">Beginner</span><span class="tag">20 min</span></div>
+      </a>
+
+      <a class="lesson-card" href="lessons/04-mouse.html">
+        <span class="num">LESSON 04</span>
+        <h3>Mouse & Cursor</h3>
+        <p>Tracking the mouse, click events, and building a target-shooter cursor game.</p>
+        <div class="meta"><span class="tag cyan">Intermediate</span><span class="tag">25 min</span></div>
+      </a>
+
+      <a class="lesson-card" href="lessons/05-physics.html">
+        <span class="num">LESSON 05</span>
+        <h3>Velocity & Gravity</h3>
+        <p>From position to velocity to acceleration. Make things jump, fall, and feel weight.</p>
+        <div class="meta"><span class="tag cyan">Intermediate</span><span class="tag">25 min</span></div>
+      </a>
+
+      <a class="lesson-card" href="lessons/06-collision.html">
+        <span class="num">LESSON 06</span>
+        <h3>Collision Detection</h3>
+        <p>AABB and circle collision, ground checks, and bouncing. The math behind hitting things.</p>
+        <div class="meta"><span class="tag cyan">Intermediate</span><span class="tag">25 min</span></div>
+      </a>
+
+      <a class="lesson-card" href="lessons/07-final.html">
+        <span class="num">LESSON 07</span>
+        <h3>Final Project: Geometry Dash</h3>
+        <p>Combine everything: scrolling world, jumping cube, deadly spikes, and a death screen.</p>
+        <div class="meta"><span class="tag mag">Advanced</span><span class="tag">60 min</span></div>
+      </a>
+    </div>
+  </div>
+</section>
+
+<section id="games">
+  <div class="container">
+    <div class="section-title">
+      <span class="num">[02]</span>
+      <h2>Game Templates</h2>
+      <span class="tag">play · read source · remix</span>
+    </div>
+    <p class="mb-3">Fully playable games with annotated source code. Crack one open, see how it works, then build your own.</p>
+
+    <div class="games-row">
+      <a class="game-card" href="games/geometry-dash.html">
+        <div class="thumb">
+          <svg viewBox="0 0 240 160" xmlns="http://www.w3.org/2000/svg">
+            <defs><linearGradient id="g1" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" stop-color="#1a2340"/><stop offset="1" stop-color="#0a0e1a"/>
+            </linearGradient></defs>
+            <rect width="240" height="160" fill="url(#g1)"/>
+            <line x1="0" y1="120" x2="240" y2="120" stroke="#9eff5a" stroke-width="2"/>
+            <rect x="40" y="92" width="22" height="22" fill="#9eff5a" transform="rotate(15 51 103)"/>
+            <polygon points="120,120 135,90 150,120" fill="#ff3eb5"/>
+            <polygon points="160,120 175,90 190,120" fill="#ff3eb5"/>
+            <circle cx="40" cy="40" r="3" fill="#fff" opacity="0.6"/>
+            <circle cx="180" cy="60" r="2" fill="#fff" opacity="0.4"/>
+            <circle cx="220" cy="30" r="2" fill="#fff" opacity="0.5"/>
+          </svg>
+        </div>
+        <div class="body">
+          <h3>Geometry Dash</h3>
+          <p>Jump over spikes in a scrolling world. Death, restart, score.</p>
+        </div>
+      </a>
+
+      <a class="game-card" href="games/snake.html">
+        <div class="thumb">
+          <svg viewBox="0 0 240 160" xmlns="http://www.w3.org/2000/svg">
+            <rect width="240" height="160" fill="#0a0e1a"/>
+            <g fill="#9eff5a">
+              <rect x="60" y="70" width="14" height="14"/>
+              <rect x="76" y="70" width="14" height="14"/>
+              <rect x="92" y="70" width="14" height="14"/>
+              <rect x="108" y="70" width="14" height="14"/>
+              <rect x="124" y="70" width="14" height="14"/>
+              <rect x="140" y="70" width="14" height="14"/>
+            </g>
+            <rect x="170" y="100" width="14" height="14" fill="#ff3eb5"/>
+          </svg>
+        </div>
+        <div class="body">
+          <h3>Snake</h3>
+          <p>The classic. Grid-based movement, growing tail, food spawning.</p>
+        </div>
+      </a>
+
+      <a class="game-card" href="games/breakout.html">
+        <div class="thumb">
+          <svg viewBox="0 0 240 160" xmlns="http://www.w3.org/2000/svg">
+            <rect width="240" height="160" fill="#0a0e1a"/>
+            <g>
+              <rect x="20" y="20" width="32" height="12" fill="#ff3eb5"/>
+              <rect x="56" y="20" width="32" height="12" fill="#ff3eb5"/>
+              <rect x="92" y="20" width="32" height="12" fill="#ffb347"/>
+              <rect x="128" y="20" width="32" height="12" fill="#ffb347"/>
+              <rect x="164" y="20" width="32" height="12" fill="#5ce1ff"/>
+              <rect x="200" y="20" width="32" height="12" fill="#5ce1ff"/>
+              <rect x="20" y="36" width="32" height="12" fill="#ff3eb5"/>
+              <rect x="56" y="36" width="32" height="12" fill="#ffb347"/>
+              <rect x="92" y="36" width="32" height="12" fill="#5ce1ff"/>
+              <rect x="128" y="36" width="32" height="12" fill="#9eff5a"/>
+              <rect x="164" y="36" width="32" height="12" fill="#9eff5a"/>
+              <rect x="200" y="36" width="32" height="12" fill="#9eff5a"/>
+            </g>
+            <circle cx="120" cy="100" r="5" fill="#fff"/>
+            <rect x="100" y="135" width="50" height="8" fill="#9eff5a" rx="2"/>
+          </svg>
+        </div>
+        <div class="body">
+          <h3>Breakout</h3>
+          <p>Paddle, ball, bricks. Classic arcade collision detection.</p>
+        </div>
+      </a>
+
+      <a class="game-card" href="games/platformer.html">
+        <div class="thumb">
+          <svg viewBox="0 0 240 160" xmlns="http://www.w3.org/2000/svg">
+            <rect width="240" height="160" fill="#0a0e1a"/>
+            <rect x="0" y="130" width="240" height="30" fill="#1d2540"/>
+            <rect x="40" y="100" width="50" height="10" fill="#9eff5a"/>
+            <rect x="120" y="80" width="50" height="10" fill="#9eff5a"/>
+            <rect x="190" y="60" width="40" height="10" fill="#9eff5a"/>
+            <rect x="60" y="80" width="14" height="20" fill="#ff3eb5"/>
+            <circle cx="200" cy="50" r="6" fill="#ffb347"/>
+          </svg>
+        </div>
+        <div class="body">
+          <h3>Mini Platformer</h3>
+          <p>Run, jump, collect coins. Multi-platform level with gravity.</p>
+        </div>
+      </a>
+    </div>
+  </div>
+</section>
+
+<section id="studio">
+  <div class="container">
+    <div class="studio-cta">
+      <div>
+        <div class="eyebrow mb-2">[03] Studio</div>
+        <h2>Build whatever you want.</h2>
+        <p>A free-form playground with a live code editor and instant preview. Pick a starter template, mash up ideas, save your work, and ship something nobody else has built.</p>
+        <a class="btn" href="studio/index.html">Open the Studio →</a>
+      </div>
+      <div class="ascii">
+   ╔══════════════════╗
+   ║  &gt;_  STUDIO.exe  ║
+   ╠══════════════════╣
+   ║                  ║
+   ║  ▓▓▓░░░░░░░ 33%  ║
+   ║  loading_canvas  ║
+   ║                  ║
+   ║  [ NEW PROJECT ] ║
+   ║  [ TEMPLATE   ▾] ║
+   ║                  ║
+   ╚══════════════════╝
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="about">
+  <div class="container">
+    <div class="section-title">
+      <span class="num">[04]</span>
+      <h2>How this works</h2>
+    </div>
+    <div class="row">
+      <div class="card">
+        <h3 style="color:var(--lime)">01. Read the concept</h3>
+        <p>Each lesson opens with the why. What problem are we solving, and why does it matter for game design?</p>
+      </div>
+      <div class="card">
+        <h3 style="color:var(--lime)">02. Edit the live code</h3>
+        <p>Every lesson has a real working example you can modify. Change a number, hit run, see what breaks. Cmd/Ctrl+Enter runs.</p>
+      </div>
+      <div class="card">
+        <h3 style="color:var(--lime)">03. Beat the challenge</h3>
+        <p>End-of-lesson challenges are auto-graded. Pass them all, then remix the game templates into something of your own.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer class="site-footer">
+  GAME_LAB · Engineering Elective · Austin Peace Academy<br>
+  Built with HTML5 Canvas, vanilla JS, and zero dependencies.
+</footer>
+
+<script>
+// Hero canvas: a tiny live Geometry Dash demo to set the tone
+(function() {
+  const c = document.getElementById('hero-canvas');
+  if (!c) return;
+  const ctx = c.getContext('2d');
+  const W = c.width, H = c.height;
+  const player = { x: 80, y: H - 60, vy: 0, size: 22, rotation: 0 };
+  const ground = H - 38;
+  const gravity = 0.7;
+  const jumpV = -11.5;
+  let scrollX = 0;
+  const speed = 3.5;
+  const obstacles = [];
+  let nextSpawn = 200;
+  const stars = Array.from({length: 30}, () => ({
+    x: Math.random() * W, y: Math.random() * (H - 80), r: Math.random() * 1.5 + 0.3,
+    a: Math.random() * 0.7 + 0.2
+  }));
+
+  function reset() {
+    player.x = 80; player.y = H - 60; player.vy = 0; player.rotation = 0;
+    obstacles.length = 0;
+    scrollX = 0;
+    nextSpawn = 200;
+  }
+
+  function update() {
+    // gravity
+    player.vy += gravity;
+    player.y += player.vy;
+    if (player.y + player.size >= ground) {
+      player.y = ground - player.size;
+      player.vy = 0;
+      player.rotation = 0;
+    } else {
+      player.rotation += 0.18;
+    }
+
+    // auto-jump for demo if there's a spike close
+    const incoming = obstacles.find(o => o.x > player.x && o.x - player.x < 70);
+    if (incoming && player.y + player.size >= ground) player.vy = jumpV;
+
+    // scroll obstacles
+    obstacles.forEach(o => o.x -= speed);
+    while (obstacles.length && obstacles[0].x < -40) obstacles.shift();
+
+    // spawn
+    scrollX += speed;
+    if (scrollX > nextSpawn) {
+      obstacles.push({ x: W + 20, w: 20, h: 26 });
+      nextSpawn = scrollX + 140 + Math.random() * 90;
+    }
+
+    // collision = reset (so demo never dies-stuck)
+    for (const o of obstacles) {
+      if (player.x + player.size > o.x && player.x < o.x + o.w &&
+          player.y + player.size > ground - o.h) {
+        reset();
+        return;
+      }
+    }
+  }
+
+  function draw() {
+    // bg
+    const grd = ctx.createLinearGradient(0, 0, 0, H);
+    grd.addColorStop(0, '#1a2340');
+    grd.addColorStop(1, '#0a0e1a');
+    ctx.fillStyle = grd;
+    ctx.fillRect(0, 0, W, H);
+    // stars
+    stars.forEach(s => {
+      ctx.fillStyle = 'rgba(255,255,255,' + s.a + ')';
+      ctx.beginPath(); ctx.arc(s.x, s.y, s.r, 0, Math.PI*2); ctx.fill();
+    });
+    // ground line
+    ctx.strokeStyle = '#9eff5a';
+    ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(0, ground); ctx.lineTo(W, ground); ctx.stroke();
+    // ground grid
+    ctx.strokeStyle = 'rgba(158,255,90,0.15)';
+    ctx.lineWidth = 1;
+    const offset = (-scrollX) % 24;
+    for (let x = offset; x < W; x += 24) {
+      ctx.beginPath(); ctx.moveTo(x, ground); ctx.lineTo(x, H); ctx.stroke();
+    }
+    // spikes
+    ctx.fillStyle = '#ff3eb5';
+    obstacles.forEach(o => {
+      ctx.beginPath();
+      ctx.moveTo(o.x, ground);
+      ctx.lineTo(o.x + o.w / 2, ground - o.h);
+      ctx.lineTo(o.x + o.w, ground);
+      ctx.closePath();
+      ctx.fill();
+    });
+    // player cube
+    ctx.save();
+    ctx.translate(player.x + player.size/2, player.y + player.size/2);
+    ctx.rotate(player.rotation);
+    ctx.fillStyle = '#9eff5a';
+    ctx.fillRect(-player.size/2, -player.size/2, player.size, player.size);
+    ctx.fillStyle = '#0a0e1a';
+    ctx.fillRect(-player.size/2 + 4, -player.size/2 + 4, player.size - 8, player.size - 8);
+    ctx.restore();
+  }
+
+  function loop() {
+    update();
+    draw();
+    requestAnimationFrame(loop);
+  }
+  loop();
+})();
+</script>
+
+</body>
+</html>
