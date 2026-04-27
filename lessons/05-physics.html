@@ -1,0 +1,257 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lesson 05 · Velocity & Gravity</title>
+<link rel="stylesheet" href="../shared.css">
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav-inner">
+    <a class="brand" href="../index.html"><span class="dot"></span>GAME_LAB</a>
+    <ul class="nav-links">
+      <li><a href="../index.html#lessons">Lessons</a></li>
+      <li><a href="../index.html#games">Games</a></li>
+      <li><a href="../studio/index.html">Studio</a></li>
+    </ul>
+  </div>
+</nav>
+
+<header class="hero">
+  <div class="container">
+    <div class="hero-meta">
+      <div class="lesson-num">05</div>
+      <div>
+        <div class="eyebrow">Module 05 · Physics</div>
+        <h1>Velocity & Gravity</h1>
+      </div>
+    </div>
+    <p class="lede">Up till now you've moved things with <code>x += 5</code>. That's a constant. Real-feeling motion comes from <em>changing</em> how fast something moves. Today we add the missing layer: velocity, acceleration, and gravity — the soul of every platformer.</p>
+  </div>
+</header>
+
+<section>
+  <div class="container">
+    <div class="section-title"><span class="num">05.1</span><h2>Three layers of motion</h2></div>
+    <p>Every moving object in physics has three values:</p>
+    <pre class="mt-2"><code><span class="tok-com">// position — where it is</span>
+<span class="tok-key">let</span> x = <span class="tok-num">100</span>, y = <span class="tok-num">100</span>;
+
+<span class="tok-com">// velocity — how fast it's moving (and which direction)</span>
+<span class="tok-key">let</span> vx = <span class="tok-num">0</span>, vy = <span class="tok-num">0</span>;
+
+<span class="tok-com">// acceleration — how the velocity is changing (e.g. gravity)</span>
+<span class="tok-key">const</span> gravity = <span class="tok-num">0.5</span>;</code></pre>
+    <p class="mt-2">Each frame, you update them in the right order:</p>
+    <pre class="mt-2"><code><span class="tok-key">function</span> <span class="tok-fn">update</span>() {
+  vy += gravity;   <span class="tok-com">// acceleration changes velocity</span>
+  x  += vx;        <span class="tok-com">// velocity changes position</span>
+  y  += vy;
+}</code></pre>
+    <p class="mt-2">That's it. Three lines. From those three lines you get jumping, falling, throwing, bouncing — every movement that feels physical.</p>
+  </div>
+</section>
+
+<section>
+  <div class="container">
+    <div class="section-title"><span class="num">05.2</span><h2>Live demo: a cube with gravity</h2></div>
+    <p class="mb-3">Press <strong>Space</strong> to jump (after clicking on the preview). The ground is at <code>y = H - 40</code>.</p>
+
+    <div class="editor-shell" data-template="canvas">
+      <div class="editor-pane">
+        <div class="pane-header"><span class="dots"><span></span><span></span><span></span></span><span>jumper.js</span></div>
+        <textarea class="code-editor" spellcheck="false">const player = {
+  x: W / 2 - 16,
+  y: H - 40 - 32,
+  size: 32,
+  vy: 0,           // vertical velocity
+  onGround: true
+};
+
+const gravity = 0.7;
+const jumpStrength = -12;  // negative = up
+const groundY = H - 40;
+
+function update() {
+  // Gravity pulls down every frame
+  player.vy += gravity;
+  player.y += player.vy;
+
+  // Ground collision
+  if (player.y + player.size >= groundY) {
+    player.y = groundY - player.size;
+    player.vy = 0;
+    player.onGround = true;
+  } else {
+    player.onGround = false;
+  }
+
+  // Jump on space — only if on ground
+  if (keys[' '] && player.onGround) {
+    player.vy = jumpStrength;
+    player.onGround = false;
+  }
+}
+
+function draw() {
+  // Sky
+  ctx.fillStyle = '#1a2340';
+  ctx.fillRect(0, 0, W, H);
+
+  // Ground
+  ctx.fillStyle = '#9eff5a';
+  ctx.fillRect(0, groundY, W, H - groundY);
+
+  // Player
+  ctx.fillStyle = '#ff3eb5';
+  ctx.fillRect(player.x, player.y, player.size, player.size);
+
+  // Hint
+  ctx.fillStyle = '#fff';
+  ctx.font = '12px monospace';
+  ctx.fillText('CLICK then press SPACE to jump', 10, 20);
+}
+
+function loop() {
+  update();
+  draw();
+  requestAnimationFrame(loop);
+}
+loop();</textarea>
+        <div class="editor-toolbar">
+          <button class="btn btn-sm" data-action="run">▶ Run</button>
+          <button class="btn btn-sm btn-secondary" data-action="reset">Reset</button>
+        </div>
+      </div>
+      <div class="preview-pane">
+        <div class="pane-header"><span>preview · click + space</span><span style="color:var(--lime)">● LIVE</span></div>
+        <iframe class="preview-frame" sandbox="allow-scripts"></iframe>
+      </div>
+    </div>
+
+    <div class="callout tip mt-3">
+      <strong>Why <code>onGround</code>?</strong> Without it, the player can jump forever in mid-air. The check "only jump if you're touching the ground" is what separates a real platformer from a flying simulator. Mario's whole design was built around this single boolean.
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="container">
+    <div class="section-title"><span class="num">05.3</span><h2>Tuning is the game</h2></div>
+    <p>Game feel lives in three numbers: <code>gravity</code>, <code>jumpStrength</code>, and the player's horizontal speed. Try these:</p>
+    <div class="row mt-2">
+      <div class="card">
+        <h3 style="color:var(--lime)">Floaty</h3>
+        <p class="mono" style="color:var(--text)">gravity = 0.3<br>jump = -10</p>
+        <p style="font-size:0.85rem">Like swimming. Long airtime. Fits dreamy or space games.</p>
+      </div>
+      <div class="card">
+        <h3 style="color:var(--magenta)">Snappy</h3>
+        <p class="mono" style="color:var(--text)">gravity = 1.0<br>jump = -16</p>
+        <p style="font-size:0.85rem">Sharp, responsive. Geometry Dash and Celeste live here.</p>
+      </div>
+      <div class="card">
+        <h3 style="color:var(--cyan)">Heavy</h3>
+        <p class="mono" style="color:var(--text)">gravity = 1.5<br>jump = -10</p>
+        <p style="font-size:0.85rem">Tank-like. The player feels weight and commitment to every leap.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="container">
+    <div class="section-title"><span class="num">05.4</span><h2>Challenge</h2></div>
+    <div class="challenge">
+      <h3>Variable jump height</h3>
+      <p class="mt-1 mb-2">In real platformers, <strong>tapping</strong> jump gives a small hop, while <strong>holding</strong> it gives a tall jump. Modify the demo so that releasing space mid-jump cuts the upward velocity in half. Hint: in the <code>keyup</code> direction, if <code>vy &lt; 0</code>, do <code>vy *= 0.5</code>.</p>
+
+      <div class="editor-shell" data-template="canvas" data-check="varjump">
+        <div class="editor-pane">
+          <div class="pane-header"><span class="dots"><span></span><span></span><span></span></span><span>challenge.js</span></div>
+          <textarea class="code-editor" spellcheck="false">const player = { x: W/2 - 16, y: H - 72, size: 32, vy: 0, onGround: true };
+const gravity = 0.7;
+const jumpStrength = -14;
+const groundY = H - 40;
+let prevSpace = false;
+
+function update() {
+  player.vy += gravity;
+  player.y += player.vy;
+
+  if (player.y + player.size >= groundY) {
+    player.y = groundY - player.size;
+    player.vy = 0;
+    player.onGround = true;
+  } else {
+    player.onGround = false;
+  }
+
+  // Detect press (was up, now down)
+  const spaceDown = keys[' '];
+  if (spaceDown && !prevSpace && player.onGround) {
+    player.vy = jumpStrength;
+  }
+
+  // TODO: detect release (was down, now up). When released, if player.vy &lt; 0, multiply player.vy by 0.5.
+
+  prevSpace = spaceDown;
+}
+
+function draw() {
+  ctx.fillStyle = '#1a2340'; ctx.fillRect(0, 0, W, H);
+  ctx.fillStyle = '#9eff5a'; ctx.fillRect(0, groundY, W, H - groundY);
+  ctx.fillStyle = '#ff3eb5'; ctx.fillRect(player.x, player.y, player.size, player.size);
+  ctx.fillStyle = '#fff';
+  ctx.font = '12px monospace';
+  ctx.fillText('Tap = small hop, hold = tall jump', 10, 20);
+}
+
+function loop() {
+  update();
+  draw();
+  requestAnimationFrame(loop);
+}
+loop();</textarea>
+          <div class="editor-toolbar">
+            <button class="btn btn-sm" data-action="run">▶ Run & Check</button>
+            <button class="btn btn-sm btn-secondary" data-action="reset">Reset</button>
+          </div>
+        </div>
+        <div class="preview-pane">
+          <div class="pane-header"><span>preview · click + tap/hold space</span><span style="color:var(--lime)">● LIVE</span></div>
+          <iframe class="preview-frame" sandbox="allow-scripts"></iframe>
+        </div>
+      </div>
+      <div class="check-result"></div>
+    </div>
+  </div>
+</section>
+
+<nav class="lesson-nav">
+  <a href="04-mouse.html"><span class="label">← Previous</span><span class="title">04 · Mouse & Cursor</span></a>
+  <a href="06-collision.html" class="next"><span class="label">Next lesson →</span><span class="title">06 · Collision Detection</span></a>
+</nav>
+
+<footer class="site-footer">GAME_LAB · Lesson 05 of 07</footer>
+
+<script src="../shared.js"></script>
+<script>
+window.CHALLENGE_CHECKS.varjump = function(code) {
+  const detectsRelease = /!spaceDown\s*&&\s*prevSpace|prevSpace\s*&&\s*!spaceDown|!spaceDown\s*&&\s*prevSpace/.test(code);
+  const cutsVelocity = /vy\s*\*=\s*0\.5|vy\s*\*\s*0\.5|vy\s*\/\s*2|vy\s*=\s*player\.vy\s*\*\s*0\.5/.test(code);
+  const checksNegativeVy = /vy\s*<\s*0|player\.vy\s*<\s*0/.test(code);
+  if (detectsRelease && cutsVelocity && checksNegativeVy) {
+    return { ok: true, message: '✓ Variable jump in! This is exactly how Mario, Celeste, and every great platformer feels responsive.' };
+  }
+  if (!detectsRelease)   return { ok: false, message: '✗ You need to detect the moment of release: `if (!spaceDown && prevSpace) { ... }`' };
+  if (!checksNegativeVy) return { ok: false, message: '✗ Only cut velocity if `player.vy < 0` (still moving up).' };
+  if (!cutsVelocity)     return { ok: false, message: '✗ When released mid-jump, do `player.vy *= 0.5`.' };
+  return { ok: false, message: '✗ Almost — combine all three pieces inside one check.' };
+};
+</script>
+
+</body>
+</html>

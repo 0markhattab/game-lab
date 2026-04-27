@@ -1,0 +1,233 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lesson 03 · Keyboard Input</title>
+<link rel="stylesheet" href="../shared.css">
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav-inner">
+    <a class="brand" href="../index.html"><span class="dot"></span>GAME_LAB</a>
+    <ul class="nav-links">
+      <li><a href="../index.html#lessons">Lessons</a></li>
+      <li><a href="../index.html#games">Games</a></li>
+      <li><a href="../studio/index.html">Studio</a></li>
+    </ul>
+  </div>
+</nav>
+
+<header class="hero">
+  <div class="container">
+    <div class="hero-meta">
+      <div class="lesson-num">03</div>
+      <div>
+        <div class="eyebrow">Module 03 · Input</div>
+        <h1>Keyboard Input</h1>
+      </div>
+    </div>
+    <p class="lede">A game where the player can't <em>do</em> anything is just an animation. In this lesson you'll capture key presses, build the famous "keys object" pattern, and move a character around with WASD.</p>
+  </div>
+</header>
+
+<section>
+  <div class="container">
+    <div class="section-title"><span class="num">03.1</span><h2>The two events</h2></div>
+    <p>The browser fires two keyboard events you care about:</p>
+    <pre class="mt-2"><code><span class="tok-fn">window</span>.<span class="tok-fn">addEventListener</span>(<span class="tok-str">'keydown'</span>, <span class="tok-fn">e</span> =&gt; {
+  <span class="tok-fn">console</span>.<span class="tok-fn">log</span>(<span class="tok-str">'pressed:'</span>, e.key);
+});
+
+<span class="tok-fn">window</span>.<span class="tok-fn">addEventListener</span>(<span class="tok-str">'keyup'</span>, <span class="tok-fn">e</span> =&gt; {
+  <span class="tok-fn">console</span>.<span class="tok-fn">log</span>(<span class="tok-str">'released:'</span>, e.key);
+});</code></pre>
+    <p class="mt-2"><code>e.key</code> gives you a friendly name like <code>"a"</code>, <code>"ArrowLeft"</code>, <code>" "</code> (spacebar), or <code>"Escape"</code>.</p>
+
+    <div class="callout warn">
+      <strong>The naive trap:</strong> beginners try to do <code>player.x += 5</code> directly inside the keydown handler. This breaks because keydown fires once on press, then waits a moment, then auto-repeats — giving you laggy, stuttery movement. Don't do this.
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="container">
+    <div class="section-title"><span class="num">03.2</span><h2>The keys-object pattern</h2></div>
+    <p>The right way: keep an object that tracks which keys are <em>currently</em> held down, then read from it each frame.</p>
+    <pre class="mt-2"><code><span class="tok-key">const</span> keys = {};
+
+<span class="tok-fn">window</span>.<span class="tok-fn">addEventListener</span>(<span class="tok-str">'keydown'</span>, <span class="tok-fn">e</span> =&gt; keys[e.key] = <span class="tok-num">true</span>);
+<span class="tok-fn">window</span>.<span class="tok-fn">addEventListener</span>(<span class="tok-str">'keyup'</span>,   <span class="tok-fn">e</span> =&gt; keys[e.key] = <span class="tok-num">false</span>);
+
+<span class="tok-com">// inside update()</span>
+<span class="tok-key">if</span> (keys[<span class="tok-str">'ArrowLeft'</span>])  player.x -= speed;
+<span class="tok-key">if</span> (keys[<span class="tok-str">'ArrowRight'</span>]) player.x += speed;</code></pre>
+    <p class="mt-2">Now movement is silky smooth — the loop checks the key state 60 times per second and moves accordingly. The <code>keys</code> object is already set up for you in every editor on this site.</p>
+  </div>
+</section>
+
+<section>
+  <div class="container">
+    <div class="section-title"><span class="num">03.3</span><h2>Live demo: a controllable square</h2></div>
+    <p class="mb-3"><strong>Click on the preview first</strong> to give it focus, then press WASD or arrow keys.</p>
+
+    <div class="editor-shell" data-template="canvas">
+      <div class="editor-pane">
+        <div class="pane-header"><span class="dots"><span></span><span></span><span></span></span><span>player.js</span></div>
+        <textarea class="code-editor" spellcheck="false">const player = {
+  x: W / 2,
+  y: H / 2,
+  size: 24,
+  speed: 3
+};
+
+function update() {
+  // Horizontal
+  if (keys['ArrowLeft']  || keys['a']) player.x -= player.speed;
+  if (keys['ArrowRight'] || keys['d']) player.x += player.speed;
+  // Vertical
+  if (keys['ArrowUp']    || keys['w']) player.y -= player.speed;
+  if (keys['ArrowDown']  || keys['s']) player.y += player.speed;
+
+  // Keep on screen
+  player.x = Math.max(0, Math.min(W - player.size, player.x));
+  player.y = Math.max(0, Math.min(H - player.size, player.y));
+}
+
+function draw() {
+  ctx.fillStyle = '#11172a';
+  ctx.fillRect(0, 0, W, H);
+
+  // Hint
+  ctx.fillStyle = '#5a6388';
+  ctx.font = '12px monospace';
+  ctx.fillText('CLICK HERE then use WASD / arrows', 10, 20);
+
+  // Player
+  ctx.fillStyle = '#9eff5a';
+  ctx.fillRect(player.x, player.y, player.size, player.size);
+}
+
+function loop() {
+  update();
+  draw();
+  requestAnimationFrame(loop);
+}
+loop();</textarea>
+        <div class="editor-toolbar">
+          <button class="btn btn-sm" data-action="run">▶ Run</button>
+          <button class="btn btn-sm btn-secondary" data-action="reset">Reset</button>
+        </div>
+      </div>
+      <div class="preview-pane">
+        <div class="pane-header"><span>preview · click to focus</span><span style="color:var(--lime)">● LIVE</span></div>
+        <iframe class="preview-frame" sandbox="allow-scripts"></iframe>
+      </div>
+    </div>
+
+    <div class="callout tip mt-3">
+      <strong>Notice the <code>Math.max</code> / <code>Math.min</code> trick.</strong> <code>Math.max(0, x)</code> means "x, but never less than 0." <code>Math.min(W - size, x)</code> means "x, but never past the right edge." Combine them and you've clamped the player inside the canvas with two lines of code.
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="container">
+    <div class="section-title"><span class="num">03.4</span><h2>Common key names</h2></div>
+    <p>Some common <code>e.key</code> values worth memorizing:</p>
+    <pre class="mt-2"><code>Letters:        <span class="tok-str">'a'</span>, <span class="tok-str">'b'</span>, <span class="tok-str">'c'</span>, ... (lowercase)
+Arrow keys:     <span class="tok-str">'ArrowUp'</span>, <span class="tok-str">'ArrowDown'</span>, <span class="tok-str">'ArrowLeft'</span>, <span class="tok-str">'ArrowRight'</span>
+Spacebar:       <span class="tok-str">' '</span> (a literal space)
+Enter:          <span class="tok-str">'Enter'</span>
+Escape:         <span class="tok-str">'Escape'</span>
+Shift:          <span class="tok-str">'Shift'</span>
+Numbers:        <span class="tok-str">'0'</span>, <span class="tok-str">'1'</span>, ..., <span class="tok-str">'9'</span></code></pre>
+  </div>
+</section>
+
+<section>
+  <div class="container">
+    <div class="section-title"><span class="num">03.5</span><h2>Challenge</h2></div>
+    <div class="challenge">
+      <h3>Sprint with Shift</h3>
+      <p class="mt-1 mb-2">Modify the demo so that <strong>holding Shift makes the player move twice as fast</strong>. Add a different visual when sprinting too — maybe change the player's color from green to magenta while Shift is held.</p>
+
+      <div class="editor-shell" data-template="canvas" data-check="sprint">
+        <div class="editor-pane">
+          <div class="pane-header"><span class="dots"><span></span><span></span><span></span></span><span>challenge.js</span></div>
+          <textarea class="code-editor" spellcheck="false">const player = { x: W/2, y: H/2, size: 24 };
+const baseSpeed = 3;
+
+function update() {
+  // TODO: define `speed` — should be baseSpeed * 2 if Shift is held, else baseSpeed
+  let speed = baseSpeed;
+
+  if (keys['ArrowLeft']  || keys['a']) player.x -= speed;
+  if (keys['ArrowRight'] || keys['d']) player.x += speed;
+  if (keys['ArrowUp']    || keys['w']) player.y -= speed;
+  if (keys['ArrowDown']  || keys['s']) player.y += speed;
+
+  player.x = Math.max(0, Math.min(W - player.size, player.x));
+  player.y = Math.max(0, Math.min(H - player.size, player.y));
+}
+
+function draw() {
+  ctx.fillStyle = '#11172a';
+  ctx.fillRect(0, 0, W, H);
+
+  // TODO: change the fillStyle based on whether Shift is held
+  ctx.fillStyle = '#9eff5a';
+  ctx.fillRect(player.x, player.y, player.size, player.size);
+
+  ctx.fillStyle = '#5a6388';
+  ctx.font = '12px monospace';
+  ctx.fillText('Hold Shift to sprint', 10, 20);
+}
+
+function loop() {
+  update();
+  draw();
+  requestAnimationFrame(loop);
+}
+loop();</textarea>
+          <div class="editor-toolbar">
+            <button class="btn btn-sm" data-action="run">▶ Run & Check</button>
+            <button class="btn btn-sm btn-secondary" data-action="reset">Reset</button>
+          </div>
+        </div>
+        <div class="preview-pane">
+          <div class="pane-header"><span>preview · click + WASD + Shift</span><span style="color:var(--lime)">● LIVE</span></div>
+          <iframe class="preview-frame" sandbox="allow-scripts"></iframe>
+        </div>
+      </div>
+      <div class="check-result"></div>
+    </div>
+  </div>
+</section>
+
+<nav class="lesson-nav">
+  <a href="02-drawing.html"><span class="label">← Previous</span><span class="title">02 · Drawing on Canvas</span></a>
+  <a href="04-mouse.html" class="next"><span class="label">Next lesson →</span><span class="title">04 · Mouse & Cursor</span></a>
+</nav>
+
+<footer class="site-footer">GAME_LAB · Lesson 03 of 07</footer>
+
+<script src="../shared.js"></script>
+<script>
+window.CHALLENGE_CHECKS.sprint = function(code) {
+  const checksShift = /keys\[\s*['"]Shift['"]\s*\]/.test(code);
+  const doublesSpeed = /baseSpeed\s*\*\s*2|speed\s*\*=\s*2|speed\s*=\s*\d+\s*\*\s*2/.test(code);
+  const changesColor = /fillStyle\s*=\s*['"]#ff3eb5['"]|fillStyle\s*=.*Shift|fillStyle\s*=.*\?/.test(code);
+  if (checksShift && doublesSpeed && changesColor) {
+    return { ok: true, message: '✓ Sprint mode engaged — try adding a stamina bar next!' };
+  }
+  if (!checksShift)   return { ok: false, message: '✗ You need to check `keys[\'Shift\']` somewhere.' };
+  if (!doublesSpeed)  return { ok: false, message: '✗ When Shift is held, set `speed = baseSpeed * 2`.' };
+  if (!changesColor)  return { ok: false, message: '✗ Change the fillStyle when Shift is held — try a ternary like `keys[\'Shift\'] ? \'#ff3eb5\' : \'#9eff5a\'`.' };
+  return { ok: false, message: '✗ Close — re-check each part of the requirement.' };
+};
+</script>
+
+</body>
+</html>

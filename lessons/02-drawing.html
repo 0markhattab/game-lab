@@ -1,0 +1,237 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lesson 02 · Drawing on Canvas</title>
+<link rel="stylesheet" href="../shared.css">
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav-inner">
+    <a class="brand" href="../index.html"><span class="dot"></span>GAME_LAB</a>
+    <ul class="nav-links">
+      <li><a href="../index.html#lessons">Lessons</a></li>
+      <li><a href="../index.html#games">Games</a></li>
+      <li><a href="../studio/index.html">Studio</a></li>
+    </ul>
+  </div>
+</nav>
+
+<header class="hero">
+  <div class="container">
+    <div class="hero-meta">
+      <div class="lesson-num">02</div>
+      <div>
+        <div class="eyebrow">Module 02 · Foundations</div>
+        <h1>Drawing on Canvas</h1>
+      </div>
+    </div>
+    <p class="lede">Now that you have a loop, you need something to draw. Canvas gives you a 2D rendering context — basically a robot painter that knows shapes, colors, and transforms. Master ten methods and you can render anything.</p>
+  </div>
+</header>
+
+<section>
+  <div class="container">
+    <div class="section-title"><span class="num">02.1</span><h2>The coordinate system</h2></div>
+    <p>Canvas coordinates start at <strong>(0, 0) in the top-left</strong>. X goes right, Y goes <em>down</em> (yes, this trips up everyone who took geometry class). A 480×320 canvas has bottom-right corner at (480, 320).</p>
+
+    <div class="callout warn">
+      <strong>Y is flipped from math class.</strong> If you want a rectangle 50 pixels from the top, that's <code>y = 50</code>. If you want it 50 from the bottom, that's <code>y = H - 50</code>.
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="container">
+    <div class="section-title"><span class="num">02.2</span><h2>The big six methods</h2></div>
+    <p class="mb-2">These are the canvas drawing methods you'll use in 99% of every game you ever write:</p>
+    <pre><code><span class="tok-com">// 1. Filled rectangle</span>
+ctx.<span class="tok-fn">fillRect</span>(x, y, width, height);
+
+<span class="tok-com">// 2. Outlined rectangle</span>
+ctx.<span class="tok-fn">strokeRect</span>(x, y, width, height);
+
+<span class="tok-com">// 3. Set the current fill / stroke color</span>
+ctx.fillStyle = <span class="tok-str">'#9eff5a'</span>;
+ctx.strokeStyle = <span class="tok-str">'#ff3eb5'</span>;
+
+<span class="tok-com">// 4. Circle (uses the path API)</span>
+ctx.<span class="tok-fn">beginPath</span>();
+ctx.<span class="tok-fn">arc</span>(x, y, radius, <span class="tok-num">0</span>, Math.PI * <span class="tok-num">2</span>);
+ctx.<span class="tok-fn">fill</span>();
+
+<span class="tok-com">// 5. Line</span>
+ctx.<span class="tok-fn">beginPath</span>();
+ctx.<span class="tok-fn">moveTo</span>(x1, y1);
+ctx.<span class="tok-fn">lineTo</span>(x2, y2);
+ctx.<span class="tok-fn">stroke</span>();
+
+<span class="tok-com">// 6. Text</span>
+ctx.font = <span class="tok-str">'24px monospace'</span>;
+ctx.<span class="tok-fn">fillText</span>(<span class="tok-str">'Hello'</span>, x, y);</code></pre>
+  </div>
+</section>
+
+<section>
+  <div class="container">
+    <div class="section-title"><span class="num">02.3</span><h2>Live demo: a scene</h2></div>
+    <p class="mb-3">Here's a static scene built from those primitives. Try changing colors, sizes, positions — the preview updates instantly.</p>
+
+    <div class="editor-shell" data-template="canvas">
+      <div class="editor-pane">
+        <div class="pane-header"><span class="dots"><span></span><span></span><span></span></span><span>scene.js</span></div>
+        <textarea class="code-editor" spellcheck="false">// Sky gradient background
+const sky = ctx.createLinearGradient(0, 0, 0, H);
+sky.addColorStop(0, '#1a2340');
+sky.addColorStop(1, '#3a2340');
+ctx.fillStyle = sky;
+ctx.fillRect(0, 0, W, H);
+
+// Stars (random dots)
+for (let i = 0; i &lt; 40; i++) {
+  ctx.fillStyle = 'rgba(255,255,255,0.8)';
+  ctx.fillRect(
+    Math.random() * W,
+    Math.random() * (H - 100),
+    1 + Math.random() * 1.5,
+    1 + Math.random() * 1.5
+  );
+}
+
+// Moon
+ctx.fillStyle = '#ffe066';
+ctx.beginPath();
+ctx.arc(380, 70, 30, 0, Math.PI * 2);
+ctx.fill();
+
+// Ground
+ctx.fillStyle = '#9eff5a';
+ctx.fillRect(0, H - 60, W, 60);
+
+// House
+ctx.fillStyle = '#ff3eb5';
+ctx.fillRect(100, H - 140, 80, 80);
+
+// Roof (triangle)
+ctx.fillStyle = '#ffb347';
+ctx.beginPath();
+ctx.moveTo(90, H - 140);
+ctx.lineTo(140, H - 180);
+ctx.lineTo(190, H - 140);
+ctx.closePath();
+ctx.fill();
+
+// Door
+ctx.fillStyle = '#0a0e1a';
+ctx.fillRect(130, H - 100, 20, 40);
+
+// Title text
+ctx.fillStyle = '#fff';
+ctx.font = 'bold 16px monospace';
+ctx.fillText('NIGHT.SCENE', 20, 30);</textarea>
+        <div class="editor-toolbar">
+          <button class="btn btn-sm" data-action="run">▶ Run</button>
+          <button class="btn btn-sm btn-secondary" data-action="reset">Reset</button>
+        </div>
+      </div>
+      <div class="preview-pane">
+        <div class="pane-header"><span>preview</span><span style="color:var(--lime)">● LIVE</span></div>
+        <iframe class="preview-frame" sandbox="allow-scripts"></iframe>
+      </div>
+    </div>
+
+    <div class="callout tip mt-3">
+      <strong>Order matters.</strong> Canvas draws in the order you call methods — later draws cover earlier ones. The sky has to come before the moon, or the moon disappears. This is called the <em>painter's algorithm</em>.
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="container">
+    <div class="section-title"><span class="num">02.4</span><h2>Transforms (rotate, scale)</h2></div>
+    <p>To rotate or scale something, you don't transform the shape — you transform the canvas <em>before</em> drawing, then restore it.</p>
+    <pre class="mt-2"><code>ctx.<span class="tok-fn">save</span>();              <span class="tok-com">// remember current state</span>
+ctx.<span class="tok-fn">translate</span>(<span class="tok-num">100</span>, <span class="tok-num">100</span>); <span class="tok-com">// move origin to (100, 100)</span>
+ctx.<span class="tok-fn">rotate</span>(Math.PI / <span class="tok-num">4</span>); <span class="tok-com">// rotate 45°</span>
+ctx.<span class="tok-fn">fillRect</span>(-<span class="tok-num">20</span>, -<span class="tok-num">20</span>, <span class="tok-num">40</span>, <span class="tok-num">40</span>); <span class="tok-com">// draw centered on new origin</span>
+ctx.<span class="tok-fn">restore</span>();           <span class="tok-com">// undo the translate + rotate</span></code></pre>
+    <p class="mt-2"><code>save</code> / <code>restore</code> always come in pairs. Forget the restore and the next thing you draw is also rotated, then the next, then the next — until your whole scene spirals.</p>
+  </div>
+</section>
+
+<section>
+  <div class="container">
+    <div class="section-title"><span class="num">02.5</span><h2>Challenge</h2></div>
+    <div class="challenge">
+      <h3>Draw a spinning sun</h3>
+      <p class="mt-1 mb-2">Make a yellow square in the center of the canvas that <strong>rotates over time</strong>. Use a variable like <code>let angle = 0</code>, increment it each frame, and use <code>ctx.rotate(angle)</code> inside a <code>save</code>/<code>restore</code> block.</p>
+
+      <div class="editor-shell" data-template="canvas" data-check="spin">
+        <div class="editor-pane">
+          <div class="pane-header"><span class="dots"><span></span><span></span><span></span></span><span>challenge.js</span></div>
+          <textarea class="code-editor" spellcheck="false">let angle = 0;
+
+function update() {
+  // TODO: increment angle every frame (something like angle += 0.05)
+}
+
+function draw() {
+  ctx.fillStyle = '#1a2340';
+  ctx.fillRect(0, 0, W, H);
+
+  // TODO: use ctx.save(), ctx.translate to canvas center,
+  //       ctx.rotate(angle), draw a 60x60 yellow square
+  //       centered at -30,-30, then ctx.restore()
+}
+
+function loop() {
+  update();
+  draw();
+  requestAnimationFrame(loop);
+}
+loop();</textarea>
+          <div class="editor-toolbar">
+            <button class="btn btn-sm" data-action="run">▶ Run & Check</button>
+            <button class="btn btn-sm btn-secondary" data-action="reset">Reset</button>
+          </div>
+        </div>
+        <div class="preview-pane">
+          <div class="pane-header"><span>preview</span><span style="color:var(--lime)">● LIVE</span></div>
+          <iframe class="preview-frame" sandbox="allow-scripts"></iframe>
+        </div>
+      </div>
+      <div class="check-result"></div>
+    </div>
+  </div>
+</section>
+
+<nav class="lesson-nav">
+  <a href="01-game-loop.html"><span class="label">← Previous</span><span class="title">01 · The Game Loop</span></a>
+  <a href="03-keyboard.html" class="next"><span class="label">Next lesson →</span><span class="title">03 · Keyboard Input</span></a>
+</nav>
+
+<footer class="site-footer">GAME_LAB · Lesson 02 of 07</footer>
+
+<script src="../shared.js"></script>
+<script>
+window.CHALLENGE_CHECKS.spin = function(code) {
+  const incrementsAngle = /angle\s*\+=\s*[\d.]+/.test(code) || /angle\s*=\s*angle\s*\+/.test(code);
+  const usesRotate = /ctx\.rotate\s*\(/.test(code);
+  const usesSave = /ctx\.save\s*\(\)/.test(code);
+  const usesRestore = /ctx\.restore\s*\(\)/.test(code);
+  const usesTranslate = /ctx\.translate\s*\(/.test(code);
+  if (incrementsAngle && usesRotate && usesSave && usesRestore && usesTranslate) {
+    return { ok: true, message: '✓ Spinning! Now play with the rotation speed and try drawing more shapes around the same center.' };
+  }
+  if (!incrementsAngle) return { ok: false, message: '✗ You need to increment `angle` each frame inside `update()`.' };
+  if (!usesSave || !usesRestore) return { ok: false, message: '✗ Wrap the rotated draw in `ctx.save()` ... `ctx.restore()`.' };
+  if (!usesTranslate) return { ok: false, message: '✗ Use `ctx.translate(W/2, H/2)` to move the origin to the canvas center.' };
+  if (!usesRotate) return { ok: false, message: '✗ Add `ctx.rotate(angle)` between translate and the fillRect.' };
+  return { ok: false, message: '✗ Almost — make sure you have all five steps in the right order.' };
+};
+</script>
+
+</body>
+</html>

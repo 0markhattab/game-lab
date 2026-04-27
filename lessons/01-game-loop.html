@@ -1,0 +1,233 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lesson 01 · The Game Loop</title>
+<link rel="stylesheet" href="../shared.css">
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav-inner">
+    <a class="brand" href="../index.html"><span class="dot"></span>GAME_LAB</a>
+    <ul class="nav-links">
+      <li><a href="../index.html#lessons">Lessons</a></li>
+      <li><a href="../index.html#games">Games</a></li>
+      <li><a href="../studio/index.html">Studio</a></li>
+    </ul>
+  </div>
+</nav>
+
+<header class="hero">
+  <div class="container">
+    <div class="hero-meta">
+      <div class="lesson-num">01</div>
+      <div>
+        <div class="eyebrow">Module 01 · Foundations</div>
+        <h1>The Game Loop</h1>
+      </div>
+    </div>
+    <p class="lede">Every game on Earth — Mario, Fortnite, Minecraft, Pong — runs on the same fundamental pattern: a loop that updates the world and redraws the screen, 60 times per second. Once you understand it, every game stops being magic.</p>
+  </div>
+</header>
+
+<section>
+  <div class="container">
+    <div class="section-title"><span class="num">01.1</span><h2>What you'll learn</h2></div>
+    <div class="row">
+      <div class="card">
+        <h3 style="color:var(--cyan)">requestAnimationFrame</h3>
+        <p>The browser's built-in 60fps timer that powers every smooth animation on the web.</p>
+      </div>
+      <div class="card">
+        <h3 style="color:var(--cyan)">The update / draw cycle</h3>
+        <p>Why every game separates "thinking" from "rendering" — and what breaks when you don't.</p>
+      </div>
+      <div class="card">
+        <h3 style="color:var(--cyan)">State variables</h3>
+        <p>How `let x = 50` plus a loop equals movement.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="container">
+    <div class="section-title"><span class="num">01.2</span><h2>The pattern</h2></div>
+    <p>A game loop is shockingly simple. It looks like this in pseudo-code:</p>
+    <pre class="mt-2"><code><span class="tok-key">function</span> <span class="tok-fn">loop</span>() {
+  <span class="tok-fn">update</span>();   <span class="tok-com">// move things, check input, run game logic</span>
+  <span class="tok-fn">draw</span>();     <span class="tok-com">// clear the screen and redraw everything</span>
+  <span class="tok-fn">requestAnimationFrame</span>(loop); <span class="tok-com">// schedule next frame</span>
+}
+<span class="tok-fn">loop</span>();</code></pre>
+
+    <div class="callout">
+      <strong>Why the split?</strong> If you draw inside your update logic, your game becomes impossible to debug, pause, or run at different speeds. Keep them separate from day one — every studio in the world does.
+    </div>
+
+    <h3 class="mt-4 mb-2">Why <code>requestAnimationFrame</code> and not <code>setInterval</code>?</h3>
+    <p>Two reasons. First, <code>requestAnimationFrame</code> syncs to the monitor's refresh rate (usually 60Hz), so animations look smooth. Second, when the user switches tabs, it pauses automatically — saving battery and preventing your game from running invisibly in the background. <code>setInterval</code> does neither.</p>
+  </div>
+</section>
+
+<section>
+  <div class="container">
+    <div class="section-title"><span class="num">01.3</span><h2>Live demo: a moving square</h2></div>
+    <p class="mb-3">Below is a complete game loop. We have a square at position <code>x</code>. Every frame, we add 2 to <code>x</code>, then redraw. That's it — that's a game.</p>
+
+    <div class="editor-shell" data-template="canvas">
+      <div class="editor-pane">
+        <div class="pane-header">
+          <span class="dots"><span></span><span></span><span></span></span>
+          <span>game.js</span>
+        </div>
+        <textarea class="code-editor" spellcheck="false">// Variables that describe the world's state
+let x = 20;
+let y = 140;
+const speed = 2;
+
+function update() {
+  // Move the square right by `speed` each frame
+  x += speed;
+
+  // Wrap around when it exits the right edge
+  if (x > W) x = -40;
+}
+
+function draw() {
+  // Clear the canvas every frame
+  ctx.fillStyle = '#11172a';
+  ctx.fillRect(0, 0, W, H);
+
+  // Draw the square
+  ctx.fillStyle = '#9eff5a';
+  ctx.fillRect(x, y, 40, 40);
+}
+
+function loop() {
+  update();
+  draw();
+  requestAnimationFrame(loop);
+}
+loop();</textarea>
+        <div class="editor-toolbar">
+          <button class="btn btn-sm" data-action="run">▶ Run</button>
+          <button class="btn btn-sm btn-secondary" data-action="reset">Reset</button>
+          <span style="font-family:var(--font-mono);font-size:0.72rem;color:var(--text-mute);margin-left:auto">⌘/Ctrl + Enter to run</span>
+        </div>
+      </div>
+      <div class="preview-pane">
+        <div class="pane-header">
+          <span>preview · 480 × 320</span>
+          <span style="color:var(--lime)">● LIVE</span>
+        </div>
+        <iframe class="preview-frame" sandbox="allow-scripts"></iframe>
+      </div>
+    </div>
+
+    <div class="callout tip mt-3">
+      <strong>Try this:</strong> Change <code>speed</code> from <code>2</code> to <code>10</code> and re-run. Then try <code>0.5</code>. Notice how the same code produces totally different feels — game design lives in these numbers.
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="container">
+    <div class="section-title"><span class="num">01.4</span><h2>Going deeper: delta time</h2></div>
+    <p>The simple loop above runs at whatever speed the browser fires. On a 60Hz monitor, that's 60 frames per second. On a 144Hz gaming monitor, the same code runs <em>2.4× faster</em>. That's a real bug. The fix is <strong>delta time</strong>:</p>
+    <pre class="mt-2"><code><span class="tok-key">let</span> lastTime = <span class="tok-num">0</span>;
+<span class="tok-key">function</span> <span class="tok-fn">loop</span>(currentTime) {
+  <span class="tok-key">const</span> dt = (currentTime - lastTime) / <span class="tok-num">1000</span>; <span class="tok-com">// seconds since last frame</span>
+  lastTime = currentTime;
+
+  <span class="tok-fn">update</span>(dt);  <span class="tok-com">// pass dt into update</span>
+  <span class="tok-fn">draw</span>();
+  <span class="tok-fn">requestAnimationFrame</span>(loop);
+}</code></pre>
+    <p class="mt-2">Now instead of <code>x += 2</code> ("move 2 pixels per frame"), you write <code>x += 120 * dt</code> ("move 120 pixels per second"). Same speed on every machine. We'll use this pattern in later lessons — for now, the simple version is fine.</p>
+  </div>
+</section>
+
+<section>
+  <div class="container">
+    <div class="section-title"><span class="num">01.5</span><h2>Challenge</h2></div>
+
+    <div class="challenge">
+      <h3>Make the square bounce</h3>
+      <p class="mt-1 mb-2">Modify the demo so the square moves right, hits the right wall, then bounces back to the left, then bounces off the left wall — forever. Hint: store the direction in a variable like <code>let vx = 2</code> and flip it (<code>vx = -vx</code>) when you hit a wall.</p>
+
+      <div class="editor-shell" data-template="canvas" data-check="bounce">
+        <div class="editor-pane">
+          <div class="pane-header"><span class="dots"><span></span><span></span><span></span></span><span>challenge.js</span></div>
+          <textarea class="code-editor" spellcheck="false">let x = 20;
+let y = 140;
+let vx = 2; // velocity in x
+
+function update() {
+  x += vx;
+
+  // TODO: when x hits the right edge (x + 40 > W), flip vx
+  // TODO: when x hits the left edge (x &lt; 0), flip vx
+}
+
+function draw() {
+  ctx.fillStyle = '#11172a';
+  ctx.fillRect(0, 0, W, H);
+  ctx.fillStyle = '#9eff5a';
+  ctx.fillRect(x, y, 40, 40);
+}
+
+function loop() {
+  update();
+  draw();
+  requestAnimationFrame(loop);
+}
+loop();</textarea>
+          <div class="editor-toolbar">
+            <button class="btn btn-sm" data-action="run">▶ Run & Check</button>
+            <button class="btn btn-sm btn-secondary" data-action="reset">Reset</button>
+          </div>
+        </div>
+        <div class="preview-pane">
+          <div class="pane-header"><span>preview</span><span style="color:var(--lime)">● LIVE</span></div>
+          <iframe class="preview-frame" sandbox="allow-scripts"></iframe>
+        </div>
+      </div>
+      <div class="check-result"></div>
+    </div>
+  </div>
+</section>
+
+<nav class="lesson-nav">
+  <a href="../index.html">
+    <span class="label">← Back</span>
+    <span class="title">Game Lab home</span>
+  </a>
+  <a href="02-drawing.html" class="next">
+    <span class="label">Next lesson →</span>
+    <span class="title">02 · Drawing on Canvas</span>
+  </a>
+</nav>
+
+<footer class="site-footer">GAME_LAB · Lesson 01 of 07</footer>
+
+<script src="../shared.js"></script>
+<script>
+window.CHALLENGE_CHECKS.bounce = function(code) {
+  const flipsRight = /vx\s*=\s*-\s*vx/.test(code) || /vx\s*\*=\s*-1/.test(code);
+  const checksRight = /x\s*\+\s*40\s*>=?\s*W|x\s*>=?\s*W\s*-\s*40/.test(code);
+  const checksLeft = /x\s*<=?\s*0/.test(code);
+  if (flipsRight && checksRight && checksLeft) {
+    return { ok: true, message: '✓ Looking good — your square should bounce off both walls. Move on when ready.' };
+  }
+  if (!checksRight) return { ok: false, message: '✗ Add a check for the right edge (something like `if (x + 40 > W)`).' };
+  if (!checksLeft)  return { ok: false, message: '✗ Add a check for the left edge (something like `if (x < 0)`).' };
+  if (!flipsRight)  return { ok: false, message: '✗ You need to flip `vx` (try `vx = -vx`) when a wall is hit.' };
+  return { ok: false, message: '✗ Not quite — re-read the hint and try again.' };
+};
+</script>
+
+</body>
+</html>

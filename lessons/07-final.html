@@ -1,0 +1,366 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lesson 07 · Final Project — Geometry Dash</title>
+<link rel="stylesheet" href="../shared.css">
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav-inner">
+    <a class="brand" href="../index.html"><span class="dot"></span>GAME_LAB</a>
+    <ul class="nav-links">
+      <li><a href="../index.html#lessons">Lessons</a></li>
+      <li><a href="../index.html#games">Games</a></li>
+      <li><a href="../studio/index.html">Studio</a></li>
+    </ul>
+  </div>
+</nav>
+
+<header class="hero">
+  <div class="container">
+    <div class="hero-meta">
+      <div class="lesson-num">07</div>
+      <div>
+        <div class="eyebrow">Module 07 · Capstone</div>
+        <h1>Build Geometry Dash</h1>
+      </div>
+    </div>
+    <p class="lede">Time to combine everything. The world scrolls. A cube auto-runs. Spikes try to kill it. You hit space at exactly the right moment to jump. We'll build it in five passes — each pass adds one layer of polish until it's a real, playable, satisfying game.</p>
+  </div>
+</header>
+
+<section>
+  <div class="container">
+    <div class="section-title"><span class="num">07.0</span><h2>Architecture overview</h2></div>
+    <p>Before any code, here's the mental model. The cube doesn't actually move forward — it stays at <code>x = 80</code>. It's the <em>world</em> that scrolls past. This is how every endless runner works under the hood.</p>
+    <pre class="mt-2"><code><span class="tok-com">// Each frame:</span>
+update_player_physics();    <span class="tok-com">// gravity, jump</span>
+scroll_world_left();        <span class="tok-com">// move all obstacles by -speed</span>
+spawn_new_obstacles();      <span class="tok-com">// when needed</span>
+remove_offscreen();         <span class="tok-com">// cleanup</span>
+check_collisions();         <span class="tok-com">// die if you hit a spike</span>
+draw();</code></pre>
+  </div>
+</section>
+
+<section>
+  <div class="container">
+    <div class="section-title"><span class="num">07.1</span><h2>Pass 1: cube + ground + jump</h2></div>
+    <p class="mb-3">Start small. Just a cube on a ground that can jump. We've done this before in Lesson 05 — copy that mental model in.</p>
+
+    <div class="editor-shell" data-template="canvas">
+      <div class="editor-pane">
+        <div class="pane-header"><span class="dots"><span></span><span></span><span></span></span><span>pass-1.js</span></div>
+        <textarea class="code-editor" spellcheck="false">const player = { x: 80, y: 0, size: 28, vy: 0, onGround: false, rotation: 0 };
+const groundY = H - 50;
+const gravity = 0.7;
+const jumpV = -12;
+
+function update() {
+  player.vy += gravity;
+  player.y += player.vy;
+
+  if (player.y + player.size >= groundY) {
+    player.y = groundY - player.size;
+    player.vy = 0;
+    player.onGround = true;
+    player.rotation = 0;
+  } else {
+    player.onGround = false;
+    player.rotation += 0.18;
+  }
+
+  if (keys[' '] && player.onGround) player.vy = jumpV;
+}
+
+function draw() {
+  ctx.fillStyle = '#1a2340'; ctx.fillRect(0, 0, W, H);
+  // ground
+  ctx.fillStyle = '#9eff5a'; ctx.fillRect(0, groundY, W, H);
+  // cube — drawn rotated around its center
+  ctx.save();
+  ctx.translate(player.x + player.size/2, player.y + player.size/2);
+  ctx.rotate(player.rotation);
+  ctx.fillStyle = '#9eff5a';
+  ctx.fillRect(-player.size/2, -player.size/2, player.size, player.size);
+  ctx.fillStyle = '#0a0e1a';
+  ctx.fillRect(-player.size/2 + 5, -player.size/2 + 5, player.size - 10, player.size - 10);
+  ctx.restore();
+}
+
+function loop() { update(); draw(); requestAnimationFrame(loop); }
+loop();</textarea>
+        <div class="editor-toolbar"><button class="btn btn-sm" data-action="run">▶ Run</button><button class="btn btn-sm btn-secondary" data-action="reset">Reset</button></div>
+      </div>
+      <div class="preview-pane">
+        <div class="pane-header"><span>pass-1 · click + space to jump</span><span style="color:var(--lime)">● LIVE</span></div>
+        <iframe class="preview-frame" sandbox="allow-scripts"></iframe>
+      </div>
+    </div>
+
+    <div class="callout">
+      <strong>Why does the cube rotate while airborne?</strong> Pure visual polish — without it, the cube looks lifeless. Robert Topala (Geometry Dash's creator) noticed players felt the game more when the cube tumbled. One line of code, transforms the feel.
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="container">
+    <div class="section-title"><span class="num">07.2</span><h2>Pass 2: scrolling world + spikes</h2></div>
+    <p class="mb-3">Now we make it endless. Add an array of spikes. Each frame, all spikes shift left by the world speed. When a spike falls off the left edge, drop it from the array. When the most recent spike has been on screen long enough, spawn a new one.</p>
+
+    <div class="editor-shell" data-template="canvas">
+      <div class="editor-pane">
+        <div class="pane-header"><span class="dots"><span></span><span></span><span></span></span><span>pass-2.js</span></div>
+        <textarea class="code-editor" spellcheck="false">const player = { x: 80, y: 0, size: 28, vy: 0, onGround: false, rotation: 0 };
+const groundY = H - 50;
+const gravity = 0.7;
+const jumpV = -12;
+const worldSpeed = 4;
+const spikes = [];
+let distance = 0;
+let nextSpawnAt = 200;
+
+function update() {
+  // physics
+  player.vy += gravity;
+  player.y += player.vy;
+  if (player.y + player.size >= groundY) {
+    player.y = groundY - player.size;
+    player.vy = 0;
+    player.onGround = true;
+    player.rotation = 0;
+  } else {
+    player.onGround = false;
+    player.rotation += 0.18;
+  }
+  if (keys[' '] && player.onGround) player.vy = jumpV;
+
+  // scroll
+  spikes.forEach(s =&gt; s.x -= worldSpeed);
+  while (spikes.length && spikes[0].x &lt; -40) spikes.shift();
+
+  // spawn
+  distance += worldSpeed;
+  if (distance &gt; nextSpawnAt) {
+    spikes.push({ x: W + 20, w: 24, h: 28 });
+    nextSpawnAt = distance + 160 + Math.random() * 100;
+  }
+}
+
+function drawSpike(s) {
+  ctx.fillStyle = '#ff3eb5';
+  ctx.beginPath();
+  ctx.moveTo(s.x, groundY);
+  ctx.lineTo(s.x + s.w/2, groundY - s.h);
+  ctx.lineTo(s.x + s.w, groundY);
+  ctx.closePath();
+  ctx.fill();
+}
+
+function draw() {
+  ctx.fillStyle = '#1a2340'; ctx.fillRect(0, 0, W, H);
+  ctx.fillStyle = '#9eff5a'; ctx.fillRect(0, groundY, W, H);
+  spikes.forEach(drawSpike);
+  ctx.save();
+  ctx.translate(player.x + player.size/2, player.y + player.size/2);
+  ctx.rotate(player.rotation);
+  ctx.fillStyle = '#9eff5a';
+  ctx.fillRect(-player.size/2, -player.size/2, player.size, player.size);
+  ctx.fillStyle = '#0a0e1a';
+  ctx.fillRect(-player.size/2 + 5, -player.size/2 + 5, player.size - 10, player.size - 10);
+  ctx.restore();
+}
+
+function loop() { update(); draw(); requestAnimationFrame(loop); }
+loop();</textarea>
+        <div class="editor-toolbar"><button class="btn btn-sm" data-action="run">▶ Run</button><button class="btn btn-sm btn-secondary" data-action="reset">Reset</button></div>
+      </div>
+      <div class="preview-pane">
+        <div class="pane-header"><span>pass-2 · spikes, but no death</span><span style="color:var(--lime)">● LIVE</span></div>
+        <iframe class="preview-frame" sandbox="allow-scripts"></iframe>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="container">
+    <div class="section-title"><span class="num">07.3</span><h2>Pass 3: collision + death + restart</h2></div>
+    <p class="mb-3">Now the cube actually <em>can</em> die. Add an AABB check between the player and each spike's bounding box. On hit, set <code>state = 'dead'</code>. Press R to restart.</p>
+
+    <div class="editor-shell" data-template="canvas">
+      <div class="editor-pane">
+        <div class="pane-header"><span class="dots"><span></span><span></span><span></span></span><span>pass-3.js</span></div>
+        <textarea class="code-editor" spellcheck="false">let state = 'play';
+let score = 0, best = 0;
+let player, spikes, distance, nextSpawnAt;
+const groundY = H - 50;
+const gravity = 0.7, jumpV = -12, worldSpeed = 4;
+
+function reset() {
+  player = { x: 80, y: groundY - 28, size: 28, vy: 0, onGround: true, rotation: 0 };
+  spikes = [];
+  distance = 0;
+  nextSpawnAt = 200;
+  score = 0;
+  state = 'play';
+}
+reset();
+
+function update() {
+  if (state === 'dead') {
+    if (keys['r'] || keys['R']) reset();
+    return;
+  }
+
+  player.vy += gravity;
+  player.y += player.vy;
+  if (player.y + player.size >= groundY) {
+    player.y = groundY - player.size;
+    player.vy = 0;
+    player.onGround = true;
+    player.rotation = 0;
+  } else {
+    player.onGround = false;
+    player.rotation += 0.18;
+  }
+  if (keys[' '] && player.onGround) player.vy = jumpV;
+
+  spikes.forEach(s =&gt; s.x -= worldSpeed);
+  while (spikes.length && spikes[0].x &lt; -40) spikes.shift();
+
+  distance += worldSpeed;
+  if (distance &gt; nextSpawnAt) {
+    spikes.push({ x: W + 20, w: 24, h: 28 });
+    nextSpawnAt = distance + 160 + Math.random() * 100;
+  }
+
+  score = Math.floor(distance / 10);
+  best = Math.max(best, score);
+
+  // AABB death check (with a small forgiveness margin)
+  const m = 4;
+  for (const s of spikes) {
+    if (player.x + player.size - m &gt; s.x &amp;&amp;
+        player.x + m &lt; s.x + s.w &amp;&amp;
+        player.y + player.size - m &gt; groundY - s.h) {
+      state = 'dead';
+      break;
+    }
+  }
+}
+
+function draw() {
+  ctx.fillStyle = '#1a2340'; ctx.fillRect(0, 0, W, H);
+  ctx.fillStyle = '#9eff5a'; ctx.fillRect(0, groundY, W, H);
+  ctx.fillStyle = '#ff3eb5';
+  spikes.forEach(s =&gt; {
+    ctx.beginPath();
+    ctx.moveTo(s.x, groundY);
+    ctx.lineTo(s.x + s.w/2, groundY - s.h);
+    ctx.lineTo(s.x + s.w, groundY);
+    ctx.closePath();
+    ctx.fill();
+  });
+  if (state === 'play') {
+    ctx.save();
+    ctx.translate(player.x + player.size/2, player.y + player.size/2);
+    ctx.rotate(player.rotation);
+    ctx.fillStyle = '#9eff5a';
+    ctx.fillRect(-player.size/2, -player.size/2, player.size, player.size);
+    ctx.fillStyle = '#0a0e1a';
+    ctx.fillRect(-player.size/2 + 5, -player.size/2 + 5, player.size - 10, player.size - 10);
+    ctx.restore();
+  }
+
+  // HUD
+  ctx.fillStyle = '#fff';
+  ctx.font = 'bold 14px monospace';
+  ctx.fillText('SCORE ' + score, 12, 22);
+  ctx.fillText('BEST ' + best, W - 90, 22);
+
+  if (state === 'dead') {
+    ctx.fillStyle = 'rgba(0,0,0,0.55)';
+    ctx.fillRect(0, 0, W, H);
+    ctx.fillStyle = '#ff3eb5';
+    ctx.font = 'bold 28px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText('YOU DIED', W/2, H/2 - 12);
+    ctx.fillStyle = '#fff';
+    ctx.font = 'bold 14px monospace';
+    ctx.fillText('press R to restart', W/2, H/2 + 18);
+    ctx.textAlign = 'start';
+  }
+}
+
+function loop() { update(); draw(); requestAnimationFrame(loop); }
+loop();</textarea>
+        <div class="editor-toolbar"><button class="btn btn-sm" data-action="run">▶ Run</button><button class="btn btn-sm btn-secondary" data-action="reset">Reset</button></div>
+      </div>
+      <div class="preview-pane">
+        <div class="pane-header"><span>pass-3 · click + space + R to restart</span><span style="color:var(--lime)">● LIVE</span></div>
+        <iframe class="preview-frame" sandbox="allow-scripts"></iframe>
+      </div>
+    </div>
+
+    <div class="callout tip mt-3">
+      <strong>The forgiveness margin (<code>m = 4</code>).</strong> The visible cube is 28 pixels but its hitbox is 8 pixels smaller. Why? Because feeling cheated when "I clearly cleared that!" is the #1 reason people quit hard games. Shrinking the hitbox by ~15% feels honest while making the game vastly more enjoyable. Every great platformer does this.
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="container">
+    <div class="section-title"><span class="num">07.4</span><h2>Pass 4 & 5: polish ideas</h2></div>
+    <p>The game is functionally complete. From here, polish is what separates a school project from a game people <em>play</em>. Here's a menu of what to add — each one is a tiny addition with outsized impact.</p>
+    <div class="row mt-3">
+      <div class="card">
+        <h3 style="color:var(--lime)">Particle trail</h3>
+        <p>Spawn 1-2 small fading squares behind the cube each frame. Push them into an array, decay their alpha, remove dead ones. ~15 lines.</p>
+      </div>
+      <div class="card">
+        <h3 style="color:var(--magenta)">Death explosion</h3>
+        <p>On hit, spawn 12 particles flying outward in random directions. Pause the world for ~30 frames before showing the death screen.</p>
+      </div>
+      <div class="card">
+        <h3 style="color:var(--cyan)">Speed ramps</h3>
+        <p>Increase <code>worldSpeed</code> by 0.001 per frame. Slowly the game gets harder. The score becomes the difficulty.</p>
+      </div>
+      <div class="card">
+        <h3 style="color:var(--amber)">Audio sting</h3>
+        <p>Use the Web Audio API to play a 100ms beep on jump and a 300ms low tone on death. Two functions, infinite game-feel improvement.</p>
+      </div>
+    </div>
+
+    <p class="mt-3">The full polished version with all of this lives at <a href="../games/geometry-dash.html"><strong>games / geometry-dash</strong></a>. Open it, study the source, then build your own variant in the <a href="../studio/index.html"><strong>Studio</strong></a>.</p>
+  </div>
+</section>
+
+<section>
+  <div class="container">
+    <div class="section-title"><span class="num">07.5</span><h2>You did it.</h2></div>
+    <p>You started with <code>let x = 0</code> and a frame loop. You're ending with a complete game built from physics, input, collision, and state management — the same building blocks every game studio uses to ship million-dollar titles. The tools haven't changed since Pong; only what you decide to build with them.</p>
+    <p class="mt-2">Where to go next:</p>
+    <ul class="mt-2" style="color:var(--text-dim);padding-left:1.2rem;line-height:1.9">
+      <li>Read the source for <a href="../games/snake.html">Snake</a>, <a href="../games/breakout.html">Breakout</a>, and <a href="../games/platformer.html">the platformer</a> — different mechanics, same patterns.</li>
+      <li>Open the <a href="../studio/index.html">Studio</a>, pick a starter, and remix it into your own thing.</li>
+      <li>Want to go further? Phaser.js (a real engine), Unity (3D), Godot (open-source), or just keep going with Canvas — every option starts where you are now.</li>
+    </ul>
+  </div>
+</section>
+
+<nav class="lesson-nav">
+  <a href="06-collision.html"><span class="label">← Previous</span><span class="title">06 · Collision Detection</span></a>
+  <a href="../studio/index.html" class="next"><span class="label">Build something →</span><span class="title">Studio</span></a>
+</nav>
+
+<footer class="site-footer">GAME_LAB · Final Lesson · 07 of 07</footer>
+
+<script src="../shared.js"></script>
+
+</body>
+</html>

@@ -1,0 +1,250 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lesson 04 · Mouse & Cursor</title>
+<link rel="stylesheet" href="../shared.css">
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav-inner">
+    <a class="brand" href="../index.html"><span class="dot"></span>GAME_LAB</a>
+    <ul class="nav-links">
+      <li><a href="../index.html#lessons">Lessons</a></li>
+      <li><a href="../index.html#games">Games</a></li>
+      <li><a href="../studio/index.html">Studio</a></li>
+    </ul>
+  </div>
+</nav>
+
+<header class="hero">
+  <div class="container">
+    <div class="hero-meta">
+      <div class="lesson-num">04</div>
+      <div>
+        <div class="eyebrow">Module 04 · Input</div>
+        <h1>Mouse & Cursor</h1>
+      </div>
+    </div>
+    <p class="lede">The mouse opens up a whole genre of games — point-and-click adventures, target shooters, RTS games, drag-and-drop puzzles. The trick is converting screen coordinates to canvas coordinates correctly.</p>
+  </div>
+</header>
+
+<section>
+  <div class="container">
+    <div class="section-title"><span class="num">04.1</span><h2>The events</h2></div>
+    <p>Mouse events fire on the canvas itself (not on <code>window</code>):</p>
+    <pre class="mt-2"><code>canvas.<span class="tok-fn">addEventListener</span>(<span class="tok-str">'mousemove'</span>, <span class="tok-fn">e</span> =&gt; { <span class="tok-com">/* track position */</span> });
+canvas.<span class="tok-fn">addEventListener</span>(<span class="tok-str">'mousedown'</span>, <span class="tok-fn">e</span> =&gt; { <span class="tok-com">/* click pressed */</span> });
+canvas.<span class="tok-fn">addEventListener</span>(<span class="tok-str">'mouseup'</span>,   <span class="tok-fn">e</span> =&gt; { <span class="tok-com">/* click released */</span> });
+canvas.<span class="tok-fn">addEventListener</span>(<span class="tok-str">'click'</span>,     <span class="tok-fn">e</span> =&gt; { <span class="tok-com">/* full click */</span> });</code></pre>
+  </div>
+</section>
+
+<section>
+  <div class="container">
+    <div class="section-title"><span class="num">04.2</span><h2>The coordinate trap</h2></div>
+    <p><code>e.clientX</code> and <code>e.clientY</code> give you the mouse position relative to the <em>browser window</em>, not your canvas. And if your canvas is being displayed at a different size than its internal resolution (very common with responsive layouts), the numbers won't even line up. The fix:</p>
+
+    <pre class="mt-2"><code>canvas.<span class="tok-fn">addEventListener</span>(<span class="tok-str">'mousemove'</span>, <span class="tok-fn">e</span> =&gt; {
+  <span class="tok-key">const</span> r = canvas.<span class="tok-fn">getBoundingClientRect</span>();
+  mouse.x = (e.clientX - r.left) * (canvas.width  / r.width);
+  mouse.y = (e.clientY - r.top)  * (canvas.height / r.height);
+});</code></pre>
+
+    <p class="mt-2">This is already wired up in every editor on this site — you can just read <code>mouse.x</code> and <code>mouse.y</code>.</p>
+  </div>
+</section>
+
+<section>
+  <div class="container">
+    <div class="section-title"><span class="num">04.3</span><h2>Live demo: cursor follower + target shooter</h2></div>
+    <p class="mb-3">Move your mouse over the preview. The crosshair follows. Click to "shoot" a target — score it, target respawns somewhere new.</p>
+
+    <div class="editor-shell" data-template="canvas">
+      <div class="editor-pane">
+        <div class="pane-header"><span class="dots"><span></span><span></span><span></span></span><span>shooter.js</span></div>
+        <textarea class="code-editor" spellcheck="false">let score = 0;
+let target = { x: 240, y: 160, r: 22 };
+
+function newTarget() {
+  target.x = 40 + Math.random() * (W - 80);
+  target.y = 40 + Math.random() * (H - 80);
+}
+
+// Detect clicks on the target
+canvas.addEventListener('click', (e) => {
+  const r = canvas.getBoundingClientRect();
+  const mx = (e.clientX - r.left) * (canvas.width / r.width);
+  const my = (e.clientY - r.top)  * (canvas.height / r.height);
+  // distance check
+  const dx = mx - target.x, dy = my - target.y;
+  if (Math.sqrt(dx*dx + dy*dy) &lt; target.r) {
+    score++;
+    newTarget();
+  }
+});
+
+function update() { /* nothing to update — driven by events */ }
+
+function draw() {
+  ctx.fillStyle = '#11172a';
+  ctx.fillRect(0, 0, W, H);
+
+  // Target (concentric circles like a bullseye)
+  ctx.fillStyle = '#ff3eb5';
+  ctx.beginPath(); ctx.arc(target.x, target.y, target.r, 0, Math.PI*2); ctx.fill();
+  ctx.fillStyle = '#fff';
+  ctx.beginPath(); ctx.arc(target.x, target.y, target.r * 0.6, 0, Math.PI*2); ctx.fill();
+  ctx.fillStyle = '#ff3eb5';
+  ctx.beginPath(); ctx.arc(target.x, target.y, target.r * 0.25, 0, Math.PI*2); ctx.fill();
+
+  // Crosshair
+  ctx.strokeStyle = '#9eff5a';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(mouse.x - 12, mouse.y); ctx.lineTo(mouse.x + 12, mouse.y);
+  ctx.moveTo(mouse.x, mouse.y - 12); ctx.lineTo(mouse.x, mouse.y + 12);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.arc(mouse.x, mouse.y, 8, 0, Math.PI*2);
+  ctx.stroke();
+
+  // Score
+  ctx.fillStyle = '#9eff5a';
+  ctx.font = 'bold 20px monospace';
+  ctx.fillText('SCORE ' + score, 14, 28);
+}
+
+function loop() {
+  update();
+  draw();
+  requestAnimationFrame(loop);
+}
+loop();</textarea>
+        <div class="editor-toolbar">
+          <button class="btn btn-sm" data-action="run">▶ Run</button>
+          <button class="btn btn-sm btn-secondary" data-action="reset">Reset</button>
+        </div>
+      </div>
+      <div class="preview-pane">
+        <div class="pane-header"><span>preview · click targets</span><span style="color:var(--lime)">● LIVE</span></div>
+        <iframe class="preview-frame" sandbox="allow-scripts"></iframe>
+      </div>
+    </div>
+
+    <div class="callout tip mt-3">
+      <strong>The distance formula.</strong> To check if the cursor is inside a circle, use <code>Math.sqrt(dx*dx + dy*dy) &lt; radius</code>. That's the Pythagorean theorem from middle school, doing real work in a real game. We'll formalize this in Lesson 06.
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="container">
+    <div class="section-title"><span class="num">04.4</span><h2>Challenge</h2></div>
+    <div class="challenge">
+      <h3>Add a 10-second timer</h3>
+      <p class="mt-1 mb-2">Modify the shooter so the player has <strong>10 seconds</strong> to score as many points as possible. When time runs out, stop spawning new targets and display "GAME OVER · score: X" in the center of the canvas. Hint: track <code>let timeLeft = 10</code> and decrement it using the frame timing.</p>
+
+      <div class="editor-shell" data-template="canvas" data-check="timer">
+        <div class="editor-pane">
+          <div class="pane-header"><span class="dots"><span></span><span></span><span></span></span><span>challenge.js</span></div>
+          <textarea class="code-editor" spellcheck="false">let score = 0;
+let timeLeft = 10;
+let lastTime = performance.now();
+let gameOver = false;
+let target = { x: 240, y: 160, r: 22 };
+
+function newTarget() {
+  target.x = 40 + Math.random() * (W - 80);
+  target.y = 40 + Math.random() * (H - 80);
+}
+
+canvas.addEventListener('click', (e) => {
+  if (gameOver) return;
+  const r = canvas.getBoundingClientRect();
+  const mx = (e.clientX - r.left) * (canvas.width / r.width);
+  const my = (e.clientY - r.top)  * (canvas.height / r.height);
+  const dx = mx - target.x, dy = my - target.y;
+  if (Math.sqrt(dx*dx + dy*dy) &lt; target.r) { score++; newTarget(); }
+});
+
+function update() {
+  // TODO: compute dt (seconds since last frame) using performance.now()
+  // TODO: subtract dt from timeLeft
+  // TODO: if timeLeft &lt;= 0, set gameOver = true and timeLeft = 0
+}
+
+function draw() {
+  ctx.fillStyle = '#11172a';
+  ctx.fillRect(0, 0, W, H);
+
+  if (!gameOver) {
+    ctx.fillStyle = '#ff3eb5';
+    ctx.beginPath(); ctx.arc(target.x, target.y, target.r, 0, Math.PI*2); ctx.fill();
+  }
+
+  // HUD
+  ctx.fillStyle = '#9eff5a';
+  ctx.font = 'bold 18px monospace';
+  ctx.fillText('SCORE ' + score, 14, 26);
+  ctx.fillStyle = '#ffb347';
+  ctx.fillText('TIME ' + timeLeft.toFixed(1), W - 130, 26);
+
+  if (gameOver) {
+    ctx.fillStyle = '#fff';
+    ctx.font = 'bold 28px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText('GAME OVER · score ' + score, W/2, H/2);
+    ctx.textAlign = 'start';
+  }
+}
+
+function loop() {
+  update();
+  draw();
+  requestAnimationFrame(loop);
+}
+loop();</textarea>
+          <div class="editor-toolbar">
+            <button class="btn btn-sm" data-action="run">▶ Run & Check</button>
+            <button class="btn btn-sm btn-secondary" data-action="reset">Reset</button>
+          </div>
+        </div>
+        <div class="preview-pane">
+          <div class="pane-header"><span>preview · click + race time</span><span style="color:var(--lime)">● LIVE</span></div>
+          <iframe class="preview-frame" sandbox="allow-scripts"></iframe>
+        </div>
+      </div>
+      <div class="check-result"></div>
+    </div>
+  </div>
+</section>
+
+<nav class="lesson-nav">
+  <a href="03-keyboard.html"><span class="label">← Previous</span><span class="title">03 · Keyboard Input</span></a>
+  <a href="05-physics.html" class="next"><span class="label">Next lesson →</span><span class="title">05 · Velocity & Gravity</span></a>
+</nav>
+
+<footer class="site-footer">GAME_LAB · Lesson 04 of 07</footer>
+
+<script src="../shared.js"></script>
+<script>
+window.CHALLENGE_CHECKS.timer = function(code) {
+  const usesPerfNow = /performance\.now\(\)/.test(code);
+  const decrementsTime = /timeLeft\s*-=|timeLeft\s*=\s*timeLeft\s*-/.test(code);
+  const checksGameOver = /timeLeft\s*<=?\s*0/.test(code) && /gameOver\s*=\s*true/.test(code);
+  if (usesPerfNow && decrementsTime && checksGameOver) {
+    return { ok: true, message: '✓ Timer working — challenge cleared. Try adding a "play again" button next!' };
+  }
+  if (!usesPerfNow)     return { ok: false, message: '✗ Use `performance.now()` to measure dt: `const now = performance.now(); const dt = (now - lastTime) / 1000; lastTime = now;`' };
+  if (!decrementsTime)  return { ok: false, message: '✗ Decrement `timeLeft` by `dt` each frame.' };
+  if (!checksGameOver)  return { ok: false, message: '✗ When `timeLeft <= 0`, set `gameOver = true`.' };
+  return { ok: false, message: '✗ Almost there — review each TODO.' };
+};
+</script>
+
+</body>
+</html>

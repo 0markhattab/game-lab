@@ -1,0 +1,261 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lesson 06 · Collision Detection</title>
+<link rel="stylesheet" href="../shared.css">
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav-inner">
+    <a class="brand" href="../index.html"><span class="dot"></span>GAME_LAB</a>
+    <ul class="nav-links">
+      <li><a href="../index.html#lessons">Lessons</a></li>
+      <li><a href="../index.html#games">Games</a></li>
+      <li><a href="../studio/index.html">Studio</a></li>
+    </ul>
+  </div>
+</nav>
+
+<header class="hero">
+  <div class="container">
+    <div class="hero-meta">
+      <div class="lesson-num">06</div>
+      <div>
+        <div class="eyebrow">Module 06 · Physics</div>
+        <h1>Collision Detection</h1>
+      </div>
+    </div>
+    <p class="lede">Two objects are touching. Now what? Detection — knowing when shapes overlap — is the foundation of every game mechanic that involves "hitting" something. We'll cover the two collision shapes you'll use in 95% of all games.</p>
+  </div>
+</header>
+
+<section>
+  <div class="container">
+    <div class="section-title"><span class="num">06.1</span><h2>AABB: rectangle vs rectangle</h2></div>
+    <p>AABB stands for "Axis-Aligned Bounding Box." Fancy name for: <em>two non-rotated rectangles</em>. The check is four comparisons:</p>
+    <pre class="mt-2"><code><span class="tok-key">function</span> <span class="tok-fn">aabb</span>(a, b) {
+  <span class="tok-key">return</span> a.x &lt; b.x + b.w &amp;&amp;
+         a.x + a.w &gt; b.x &amp;&amp;
+         a.y &lt; b.y + b.h &amp;&amp;
+         a.y + a.h &gt; b.y;
+}</code></pre>
+    <p class="mt-2">Read it out loud: "A's left edge is past B's right edge? AND A's right edge is past B's left? AND..." If <em>all four</em> are true, the rectangles overlap. If even one is false, they don't. This is the single most-used collision function in game dev.</p>
+
+    <div class="callout warn">
+      <strong>The classic bug:</strong> using <code>&lt;=</code> instead of <code>&lt;</code>. With <code>&lt;=</code>, two rectangles touching exactly at the edge count as colliding. Usually you don't want that. Stick to strict <code>&lt;</code> and <code>&gt;</code>.
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="container">
+    <div class="section-title"><span class="num">06.2</span><h2>Live demo: bumping into walls</h2></div>
+    <p class="mb-3">Walk the green square (WASD) and try to push through the magenta walls. The AABB check stops you.</p>
+
+    <div class="editor-shell" data-template="canvas">
+      <div class="editor-pane">
+        <div class="pane-header"><span class="dots"><span></span><span></span><span></span></span><span>collide.js</span></div>
+        <textarea class="code-editor" spellcheck="false">const player = { x: 50, y: 50, w: 24, h: 24 };
+const speed = 3;
+
+const walls = [
+  { x: 150, y: 60,  w: 30, h: 200 },
+  { x: 280, y: 30,  w: 30, h: 130 },
+  { x: 360, y: 150, w: 100, h: 30 }
+];
+
+function aabb(a, b) {
+  return a.x &lt; b.x + b.w &amp;&amp;
+         a.x + a.w &gt; b.x &amp;&amp;
+         a.y &lt; b.y + b.h &amp;&amp;
+         a.y + a.h &gt; b.y;
+}
+
+function update() {
+  // Try moving X first
+  let nx = player.x;
+  if (keys['ArrowLeft']  || keys['a']) nx -= speed;
+  if (keys['ArrowRight'] || keys['d']) nx += speed;
+  let test = { x: nx, y: player.y, w: player.w, h: player.h };
+  if (!walls.some(w =&gt; aabb(test, w))) player.x = nx;
+
+  // Then Y separately
+  let ny = player.y;
+  if (keys['ArrowUp']    || keys['w']) ny -= speed;
+  if (keys['ArrowDown']  || keys['s']) ny += speed;
+  test = { x: player.x, y: ny, w: player.w, h: player.h };
+  if (!walls.some(w =&gt; aabb(test, w))) player.y = ny;
+
+  player.x = Math.max(0, Math.min(W - player.w, player.x));
+  player.y = Math.max(0, Math.min(H - player.h, player.y));
+}
+
+function draw() {
+  ctx.fillStyle = '#11172a';
+  ctx.fillRect(0, 0, W, H);
+  // Walls
+  ctx.fillStyle = '#ff3eb5';
+  walls.forEach(w =&gt; ctx.fillRect(w.x, w.y, w.w, w.h));
+  // Player
+  ctx.fillStyle = '#9eff5a';
+  ctx.fillRect(player.x, player.y, player.w, player.h);
+  // Hint
+  ctx.fillStyle = '#fff';
+  ctx.font = '12px monospace';
+  ctx.fillText('CLICK + WASD · try to push through walls', 10, 20);
+}
+
+function loop() {
+  update();
+  draw();
+  requestAnimationFrame(loop);
+}
+loop();</textarea>
+        <div class="editor-toolbar">
+          <button class="btn btn-sm" data-action="run">▶ Run</button>
+          <button class="btn btn-sm btn-secondary" data-action="reset">Reset</button>
+        </div>
+      </div>
+      <div class="preview-pane">
+        <div class="pane-header"><span>preview · click + WASD</span><span style="color:var(--lime)">● LIVE</span></div>
+        <iframe class="preview-frame" sandbox="allow-scripts"></iframe>
+      </div>
+    </div>
+
+    <div class="callout tip mt-3">
+      <strong>The "test before you commit" pattern.</strong> Don't move the player and then check. <em>Calculate</em> the new position, test it for collisions, and only commit if it's clear. And solve X and Y separately — that's what lets you slide along a wall instead of getting stuck on it.
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="container">
+    <div class="section-title"><span class="num">06.3</span><h2>Circle vs circle</h2></div>
+    <p>For circular objects (bullets, balls, characters with rounded hitboxes), use distance:</p>
+    <pre class="mt-2"><code><span class="tok-key">function</span> <span class="tok-fn">circleHit</span>(a, b) {
+  <span class="tok-key">const</span> dx = a.x - b.x;
+  <span class="tok-key">const</span> dy = a.y - b.y;
+  <span class="tok-key">const</span> distSq = dx*dx + dy*dy;
+  <span class="tok-key">const</span> rSum = a.r + b.r;
+  <span class="tok-key">return</span> distSq &lt; rSum * rSum;
+}</code></pre>
+    <p class="mt-2">We compare <em>squared</em> distances to avoid the expensive <code>Math.sqrt</code> call. Same answer, faster math. When you're checking 100 bullets against 100 enemies every frame (= 10,000 checks), this matters.</p>
+  </div>
+</section>
+
+<section>
+  <div class="container">
+    <div class="section-title"><span class="num">06.4</span><h2>Challenge</h2></div>
+    <div class="challenge">
+      <h3>Coin collector</h3>
+      <p class="mt-1 mb-2">Spawn 5 coins (small magenta circles) at random positions. Move the player around to collect them — when the player overlaps a coin, the coin disappears and the score increases. Use AABB or treat the coin as a circle (the player as a circle of radius 12 centered at <code>x + w/2, y + h/2</code>) — your call.</p>
+
+      <div class="editor-shell" data-template="canvas" data-check="coins">
+        <div class="editor-pane">
+          <div class="pane-header"><span class="dots"><span></span><span></span><span></span></span><span>challenge.js</span></div>
+          <textarea class="code-editor" spellcheck="false">const player = { x: 40, y: 40, w: 24, h: 24 };
+const speed = 3;
+let score = 0;
+
+// Spawn 5 coins
+const coins = [];
+for (let i = 0; i &lt; 5; i++) {
+  coins.push({ x: 60 + Math.random() * (W - 120), y: 60 + Math.random() * (H - 120), r: 10, alive: true });
+}
+
+function update() {
+  if (keys['ArrowLeft']  || keys['a']) player.x -= speed;
+  if (keys['ArrowRight'] || keys['d']) player.x += speed;
+  if (keys['ArrowUp']    || keys['w']) player.y -= speed;
+  if (keys['ArrowDown']  || keys['s']) player.y += speed;
+  player.x = Math.max(0, Math.min(W - player.w, player.x));
+  player.y = Math.max(0, Math.min(H - player.h, player.y));
+
+  // TODO: loop through coins. For each living coin, check if the player overlaps it.
+  //   If so, set coin.alive = false and increment score.
+  //   Hint: get the player's center as cx = player.x + player.w/2, cy = player.y + player.h/2.
+  //   Then check distance to coin.x, coin.y vs (player.w/2 + coin.r).
+}
+
+function draw() {
+  ctx.fillStyle = '#11172a';
+  ctx.fillRect(0, 0, W, H);
+
+  // Coins
+  ctx.fillStyle = '#ff3eb5';
+  coins.forEach(c =&gt; {
+    if (!c.alive) return;
+    ctx.beginPath();
+    ctx.arc(c.x, c.y, c.r, 0, Math.PI * 2);
+    ctx.fill();
+  });
+
+  // Player
+  ctx.fillStyle = '#9eff5a';
+  ctx.fillRect(player.x, player.y, player.w, player.h);
+
+  // Score
+  ctx.fillStyle = '#fff';
+  ctx.font = 'bold 16px monospace';
+  ctx.fillText('COINS ' + score + '/5', 14, 24);
+
+  if (score === 5) {
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#9eff5a';
+    ctx.font = 'bold 28px monospace';
+    ctx.fillText('ALL CLEAR!', W/2, H/2);
+    ctx.textAlign = 'start';
+  }
+}
+
+function loop() {
+  update();
+  draw();
+  requestAnimationFrame(loop);
+}
+loop();</textarea>
+          <div class="editor-toolbar">
+            <button class="btn btn-sm" data-action="run">▶ Run & Check</button>
+            <button class="btn btn-sm btn-secondary" data-action="reset">Reset</button>
+          </div>
+        </div>
+        <div class="preview-pane">
+          <div class="pane-header"><span>preview · click + WASD</span><span style="color:var(--lime)">● LIVE</span></div>
+          <iframe class="preview-frame" sandbox="allow-scripts"></iframe>
+        </div>
+      </div>
+      <div class="check-result"></div>
+    </div>
+  </div>
+</section>
+
+<nav class="lesson-nav">
+  <a href="05-physics.html"><span class="label">← Previous</span><span class="title">05 · Velocity & Gravity</span></a>
+  <a href="07-final.html" class="next"><span class="label">Next lesson →</span><span class="title">07 · Final Project</span></a>
+</nav>
+
+<footer class="site-footer">GAME_LAB · Lesson 06 of 07</footer>
+
+<script src="../shared.js"></script>
+<script>
+window.CHALLENGE_CHECKS.coins = function(code) {
+  const loopsCoins = /coins\.forEach|for\s*\(\s*(let|const|var)?\s*\w+\s+of\s+coins|for\s*\(\s*let\s+i\s*=\s*0\s*;\s*i\s*<\s*coins/.test(code);
+  const setsAlive = /\.alive\s*=\s*false/.test(code);
+  const incrementsScore = /score\s*\+\+|score\s*\+=\s*1/.test(code);
+  const distOrAabb = /Math\.sqrt|Math\.hypot|dx\s*\*\s*dx|aabb/.test(code);
+  if (loopsCoins && setsAlive && incrementsScore && distOrAabb) {
+    return { ok: true, message: '✓ Coins collected! You\'ve now got every ingredient for a real game: input, motion, drawing, and collision.' };
+  }
+  if (!loopsCoins)        return { ok: false, message: '✗ Loop through `coins` (use `coins.forEach(c => { ... })`).' };
+  if (!distOrAabb)        return { ok: false, message: '✗ Inside the loop, do a distance or AABB check between the player and the coin.' };
+  if (!setsAlive)         return { ok: false, message: '✗ When the player overlaps a coin, set `coin.alive = false`.' };
+  if (!incrementsScore)   return { ok: false, message: '✗ Don\'t forget to increment `score` when collecting a coin.' };
+  return { ok: false, message: '✗ Close — verify each TODO step.' };
+};
+</script>
+
+</body>
+</html>
